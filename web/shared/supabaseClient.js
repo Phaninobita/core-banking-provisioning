@@ -13,7 +13,9 @@ const config = require("./config");
 class SupabaseClient {
   constructor() {
     this.baseUrl = (config.SUPABASE_URL || "https://uvfdokzjdwwjpsxuuyey.supabase.co").replace(/\/+$/, "");
-    this.apiKey = config.SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2ZmRva3pqZHd3anBzeHV1eWV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5Mzg2ODksImV4cCI6MjEwNDUxNDY4OX0.UC9bUPOPewtuJLZhuKCaxADoC5Qaqxvl0sY_iLzjHaA";
+    // Prefer the service_role key for server-side core banking writes (bypasses RLS);
+    // fall back to the anon key when no service key is configured.
+    this.apiKey = config.SUPABASE_SERVICE_KEY || config.SUPABASE_ANON_KEY || "";
     this.projectHost = new URL(this.baseUrl).hostname;
     this.isOperational = false;
   }
@@ -617,6 +619,59 @@ class SupabaseClient {
       return Array.isArray(res.data) ? res.data : [];
     } catch (e) {
       return [];
+    }
+  }
+
+  // ── Maker-Checker Authorization Queue (core_authorization_requests) ──
+
+  async saveAuthRequest(req) {
+    if (!req || !req.request_ref) return null;
+    const payload = {
+      request_ref: req.request_ref,
+      request_type: req.request_type,
+      payload: req.payload || {},
+      status: req.status || "pending",
+      maker_id: req.maker_id,
+      maker_name: req.maker_name || null,
+      maker_comment: req.maker_comment || null,
+      checker_id: req.checker_id || null,
+      checker_name: req.checker_name || null,
+      checker_comment: req.checker_comment || null,
+      result_ref: req.result_ref || null,
+      company_uid: req.company_uid || null,
+      decided_at: req.decided_at || null,
+      updated_at: new Date().toISOString()
+    };
+    const res = await this.request("core_authorization_requests?on_conflict=request_ref", {
+      method: "POST",
+      headers: { "Prefer": "resolution=merge-duplicates,return=representation" },
+      body: payload
+    });
+    return Array.isArray(res.data) && res.data.length > 0 ? res.data[0] : payload;
+  }
+
+  async listAuthRequests(status, limit = 200) {
+    let query = `core_authorization_requests?select=*&order=created_at.desc&limit=${limit}`;
+    if (status) query += `&status=eq.${encodeURIComponent(status)}`;
+    try {
+      const res = await this.request(query);
+      return Array.isArray(res.data) ? res.data : null;
+    } catch (e) {
+      return null; // table missing → caller falls back to memory
+    }
+  }
+
+  async patchAuthRequest(request_ref, updates) {
+    const clean = encodeURIComponent(String(request_ref).trim());
+    try {
+      const res = await this.request(`core_authorization_requests?request_ref=eq.${clean}`, {
+        method: "PATCH",
+        headers: { "Prefer": "return=representation" },
+        body: { ...updates, updated_at: new Date().toISOString() }
+      });
+      return Array.isArray(res.data) && res.data.length > 0 ? res.data[0] : null;
+    } catch (e) {
+      return null;
     }
   }
 

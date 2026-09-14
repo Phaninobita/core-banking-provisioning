@@ -605,3 +605,68 @@ ALTER TABLE corporate_accounts ADD COLUMN IF NOT EXISTS bic VARCHAR(16);
 
 CREATE INDEX IF NOT EXISTS idx_corp_acc_cif ON corporate_accounts (cif_number);
 CREATE INDEX IF NOT EXISTS idx_corp_acc_bic ON corporate_accounts (bic);
+-- =======================================================
+-- Core Banking Operations: Maker-Checker Authorization Queue
+-- Every CIF creation, account opening and transaction goes in
+-- as a request by a MAKER and is executed only after a
+-- different user (CHECKER) approves it. Full audit trail.
+-- Idempotent; run after 03_core_provisioning.sql.
+-- =======================================================
+
+CREATE TABLE IF NOT EXISTS core_authorization_requests (
+    id BIGSERIAL PRIMARY KEY,
+    request_ref VARCHAR(32) UNIQUE NOT NULL,
+    request_type VARCHAR(32) NOT NULL,          -- CIF_CREATE | ACCOUNT_CREATE | TRANSACTION
+    payload JSONB NOT NULL DEFAULT '{}'::jsonb, -- full request details
+    status VARCHAR(32) NOT NULL DEFAULT 'pending', -- pending | approved | rejected
+    maker_id VARCHAR(64) NOT NULL,
+    maker_name TEXT,
+    maker_comment TEXT,
+    checker_id VARCHAR(64),
+    checker_name TEXT,
+    checker_comment TEXT,
+    result_ref TEXT,                            -- created cif_number / account_number / transaction_ref
+    company_uid VARCHAR(64),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    decided_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_core_auth_status ON core_authorization_requests (status);
+CREATE INDEX IF NOT EXISTS idx_core_auth_type ON core_authorization_requests (request_type);
+CREATE INDEX IF NOT EXISTS idx_core_auth_maker ON core_authorization_requests (maker_id);
+CREATE INDEX IF NOT EXISTS idx_core_auth_created ON core_authorization_requests (created_at DESC);
+
+DROP TRIGGER IF EXISTS trg_core_auth_updated_at ON core_authorization_requests;
+CREATE TRIGGER trg_core_auth_updated_at
+BEFORE UPDATE ON core_authorization_requests
+FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+-- =======================================================
+-- Row Level Security policies for the backend API (anon key path)
+-- The Node backend writes CIFs, accounts, transactions and the
+-- authorization queue directly. If you set SUPABASE_SERVICE_KEY in
+-- Railway, this file is optional (service role bypasses RLS).
+-- Idempotent — safe to re-run.
+-- =======================================================
+
+DO $$
+DECLARE t TEXT;
+BEGIN
+    FOREACH t IN ARRAY ARRAY[
+        'corporate_accounts',
+        'account_transactions',
+        'corporate_onboarding_applications',
+        'rm_customer_invitations',
+        'customer_information_files',
+        'customer_bic_registry',
+        'core_authorization_requests'
+    ] LOOP
+        EXECUTE FORMAT('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
+
+        EXECUTE FORMAT('DROP POLICY IF EXISTS %I ON public.%I', 'api_full_access_' || t, t);
+        EXECUTE FORMAT(
+            'CREATE POLICY %I ON public.%I FOR ALL TO anon, authenticated USING (true) WITH CHECK (true)',
+            'api_full_access_' || t, t
+        );
+    END LOOP;
+END $$;

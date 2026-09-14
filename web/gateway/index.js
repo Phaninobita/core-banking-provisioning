@@ -26,6 +26,7 @@ const bankService = require("../services/banking-service");
 const notifService = require("../services/notification-service");
 const rmService = require("../services/rm-service");
 const provisioningService = require("../services/provisioning-service");
+const coreService = require("../services/core-service");
 
 const app = express();
 app.set("trust proxy", 1);
@@ -137,6 +138,14 @@ app.get("/api/v1/gateway/health", (req, res) => {
         endpoints: ["/api/v1/provisioning/provision", "/api/v1/provisioning/profile/:company_uid", "/api/v1/provisioning/cif/:company_uid", "/api/v1/provisioning/bic/:company_uid", "/api/v1/provisioning/bic/assign"]
       },
       {
+        id: "core-service",
+        name: "Core Banking Operations Service (Maker-Checker)",
+        port: 3007,
+        status: "online",
+        type: "microservice",
+        endpoints: ["/api/v1/core/cif", "/api/v1/core/accounts", "/api/v1/core/transactions", "/api/v1/core/requests", "/api/v1/core/requests/:ref/approve", "/api/v1/core/requests/:ref/reject", "/api/v1/core/cifs", "/api/v1/core/audit"]
+      },
+      {
         id: "notification-service",
         name: "Notification & Mailbox Service",
         port: config.MICROSERVICES.NOTIFICATIONS.port,
@@ -158,6 +167,7 @@ app.use("/api/v1/mobile", bankService.router); // Mobile summary & quick routes
 app.use("/api/v1/notifications", notifService.router);
 app.use("/api/v1/rm", rmService.router);
 app.use("/api/v1/provisioning", provisioningService.router);
+app.use("/api/v1/core", coreService.router);
 
 // ── Legacy Forwarding Routers (100% Backward Compatibility) ──
 app.use("/api/auth", authService.router);

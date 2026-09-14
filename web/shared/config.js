@@ -13,6 +13,10 @@ module.exports = {
   DATABASE_URL: process.env.DATABASE_URL || "",
   SUPABASE_URL: process.env.SUPABASE_URL || "https://uvfdokzjdwwjpsxuuyey.supabase.co",
   SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2ZmRva3pqZHd3anBzeHV1eWV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5Mzg2ODksImV4cCI6MjEwNDUxNDY4OX0.UC9bUPOPewtuJLZhuKCaxADoC5Qaqxvl0sY_iLzjHaA",
+  // Server-side bypass of RLS. Recommended in production: set SUPABASE_SERVICE_KEY
+  // (Supabase → Settings → API → service_role secret) in Railway env vars so all
+  // core banking writes succeed even with row-level security enabled.
+  SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY || "",
   GOOGLE_VISION_API_KEY: process.env.GOOGLE_VISION_API_KEY || "",
   SMTP: {
     HOST: process.env.SMTP_HOST || "",
