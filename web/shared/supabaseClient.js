@@ -913,6 +913,117 @@ class SupabaseClient {
     return `FNBKAE2X${customerCode}`;
   }
 
+  // ── Core Activation Handoff (STP): copy verified onboarding data into `_core` tables ──
+  // Called once, when the journey reaches ACCOUNT ACTIVATED. The same company
+  // name / CRN / email captured during onboarding is what opens the account.
+
+  async _coreCopy(table, payload, conflictKey) {
+    const path = conflictKey
+      ? `${table}?on_conflict=${conflictKey}`
+      : table;
+    const res = await this.request(path, {
+      method: "POST",
+      headers: { "Prefer": conflictKey ? "resolution=merge-duplicates,return=minimal" : "return=minimal" },
+      body: payload
+    });
+    return res.statusCode >= 200 && res.statusCode < 300;
+  }
+
+  async activateCoreHandoff(application) {
+    if (!application || !application.company_uid) return { ok: false, reason: "company_uid required" };
+    const uid = application.company_uid.trim().toUpperCase();
+    const results = { master: false, stages: {} };
+
+    // 1. Master record — verbatim from the onboarding application
+    results.master = await this._coreCopy("corporate_onboarding_applications_core", {
+      company_uid: uid,
+      application_ref: application.application_ref || null,
+      crn: application.crn || null,
+      registered_email: application.registered_email || null,
+      current_step: 7,
+      status: "account_activated",
+      company_name: application.company_name || null,
+      trade_name: application.trade_name || null,
+      legal_type: application.legal_type || null,
+      licence_issue_date: application.licence_issue_date || null,
+      licence_expiry_date: application.licence_expiry_date || null,
+      licence_issued_by: application.licence_issued_by || null,
+      vat_trn: application.vat_trn || null,
+      contact_person: application.contact_person || null,
+      phone: application.phone || null,
+      address: application.address || null,
+      form_data: application.form_data || {},
+      activated_at: new Date().toISOString()
+    }, "company_uid");
+
+    // 2. Stage mirrors — company info
+    try {
+      const s2 = await this.getStep2CompanyInfo(uid);
+      if (s2) results.stages.step2 = await this._coreCopy("step2_company_info_core", s2, "company_uid");
+    } catch (e) { /* stage absent */ }
+
+    // 3. UBOs
+    try {
+      const s3 = await this.getStep3UboDetails(uid);
+      if (s3 && s3.length) {
+        const rows = s3.map(u => {
+          const { id, created_at, updated_at, ...rest } = u;
+          return rest;
+        });
+        results.stages.step3 = await this._coreCopy("step3_ubo_details_core", rows);
+      }
+    } catch (e) { /* stage absent */ }
+
+    // 4. Ownership
+    try {
+      const s4 = await this.getStep4Ownership(uid);
+      if (s4) results.stages.step4 = await this._coreCopy("step4_ownership_core", s4, "company_uid");
+    } catch (e) { /* stage absent */ }
+
+    // 5. Roles / mandates
+    try {
+      const s5 = await this.getStep5Roles(uid);
+      if (s5) results.stages.step5 = await this._coreCopy("step5_roles_core", s5, "company_uid");
+    } catch (e) { /* stage absent */ }
+
+    // 6. FATCA / CRS
+    try {
+      const s6 = await this.getStep6FatcaCrs(uid);
+      if (s6) results.stages.step6 = await this._coreCopy("step6_fatca_crs_core", s6, "company_uid");
+    } catch (e) { /* stage absent */ }
+
+    // 7. Review & submit (signatory)
+    try {
+      const s7 = await this.getStep7ReviewSubmit(uid);
+      if (s7) results.stages.step7 = await this._coreCopy("step7_review_submit_core", s7, "company_uid");
+    } catch (e) { /* stage absent */ }
+
+    // 8. Documents (metadata + vault payload)
+    try {
+      const docs = await this.getStep1Documents(uid);
+      if (docs && docs.length) {
+        const rows = docs.map(d => {
+          const { id, created_at, updated_at, ...rest } = d;
+          return rest;
+        });
+        results.stages.step1 = await this._coreCopy("step1_documents_core", rows);
+      }
+    } catch (e) { /* stage absent */ }
+
+    return { ok: results.master, results };
+  }
+
+  async getCoreActivation(company_uid) {
+    if (!company_uid) return null;
+    const cleanUid = encodeURIComponent(company_uid.trim().toUpperCase());
+    try {
+      const res = await this.request(`corporate_onboarding_applications_core?company_uid=eq.${cleanUid}&select=*&limit=1`);
+      return Array.isArray(res.data) && res.data.length > 0 ? res.data[0] : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   async saveCif(cif) {
     if (!cif || !cif.company_uid) return null;
     const cleanUid = cif.company_uid.trim().toUpperCase();

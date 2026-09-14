@@ -504,13 +504,15 @@ function renderPipelineTable(invitations) {
             year: "numeric"
         }) : "Recently";
 
-        const statusClass = inv.status === "completed" ? "completed" : 
-                           (inv.status === "in_progress" ? "in_progress" : 
-                           (inv.status === "review" ? "review" : "invited"));
+        // Canonical 3-stage journey: Link Initiated → In Progress / Under Review → Account Activated
+        const coreDone = inv.core_provisioned === true || inv.core_provisioned === 'true';
+        const canonical = coreDone || ["completed", "approved", "account_activated"].includes(inv.status)
+            ? "account_activated"
+            : (["invited", "link_initiated"].includes(inv.status) ? "link_initiated" : "in_progress_under_review");
 
-        const statusLabel = inv.status === "completed" ? "&#x2705; Activated" : 
-                           (inv.status === "in_progress" ? "&#x23F3; In Progress" : 
-                           (inv.status === "review" ? "&#x1F4CB; In Review" : "&#x2709; Dispatched"));
+        const statusClass = canonical;
+        const statusLabel = canonical === "account_activated" ? "&#x2705; Account Activated" :
+                           (canonical === "link_initiated" ? "&#x1F517; Link Initiated" : "&#x23F3; In Progress / Under Review");
 
         const stepText = inv.current_step ? `Step ${inv.current_step} of 7` : "Step 1 of 7";
         const cuid = inv.company_uid || ('CUID-' + (inv.crn || '').toUpperCase().replace(/[^A-Z0-9]/g, ''));
@@ -565,12 +567,14 @@ function updatePipelineMetrics(invitations) {
     let inReview = 0;
     let activated = 0;
 
+    // Canonical 3-stage journey buckets
+    let linkInitiated = 0;
     invitations.forEach(inv => {
-        if (inv.status === "completed") activated++;
-        else if (inv.status === "in_progress") inProgress++;
-        else if (inv.status === "review") inReview++;
-        else inProgress++; // count newly invited as active pipeline
+        if (inv.journey_status === "account_activated") activated++;
+        else if (inv.journey_status === "link_initiated") linkInitiated++;
+        else inProgress++; // in_progress_under_review
     });
+    inReview = linkInitiated;
 
     const mTotal = document.getElementById("metricTotalInvited");
     const mProg = document.getElementById("metricInProgress");

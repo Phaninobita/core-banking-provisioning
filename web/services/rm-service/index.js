@@ -287,6 +287,25 @@ router.get("/invitations", requireRmAuth, async (req, res) => {
     });
 
 
+    // Enrich with core provisioning state so the journey shows the canonical
+    // "Account Activated" stage once the customer exists in core banking.
+    try {
+      const supabaseClient = require("../../shared/supabaseClient");
+      const cifs = await supabaseClient.listCifs();
+      const provisionedUids = new Set(cifs.map(c => String(c.company_uid || "").toUpperCase()));
+      invitations = invitations.map(inv => {
+        const uid = String(inv.company_uid || "").toUpperCase();
+        const coreProvisioned = provisionedUids.has(uid);
+        const s = inv.status;
+        const journey_status = coreProvisioned || ["completed", "approved", "account_activated"].includes(s)
+          ? "account_activated"
+          : (["invited", "link_initiated"].includes(s) ? "link_initiated" : "in_progress_under_review");
+        return { ...inv, core_provisioned: coreProvisioned, journey_status };
+      });
+    } catch (coreErr) {
+      console.warn("[RM-SERVICE] Core enrichment notice:", coreErr.message);
+    }
+
     return res.json({
       success: true,
       count: invitations.length,

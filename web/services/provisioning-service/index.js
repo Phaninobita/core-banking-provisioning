@@ -87,7 +87,9 @@ async function provisionCorporateCustomer(application, options = {}) {
         cif_number: cif.cif_number,
         bic: dedicatedBic,
         currency,
-        account_name: `${company_name} Operational Treasury${suffix}`,
+        // STP: the account is opened under the EXACT name captured during
+        // onboarding — same company name, same CRN, no re-keying.
+        account_name: options.accountName || `${company_name}${suffix}`,
         account_type: "Corporate Checking",
         balance: openingBalance,
         available_balance: openingBalance,
@@ -102,12 +104,41 @@ async function provisionCorporateCustomer(application, options = {}) {
     }
   }
 
+  // ── Step 4: Core activation handoff (STP) ──
+  // Copy the entire verified onboarding record — master application, company
+  // info, UBOs, ownership, mandates, tax, declarations and documents — into
+  // the `*_core` mirror tables. This is the real-time banking technique: the
+  // core runs on the same data the customer entered, never re-typed.
+  let activation = { ok: false };
+  try {
+    activation = await supabaseClient.activateCoreHandoff(application);
+    // Stamp the activation result on the master _core record
+    if (activation.ok && accounts[0]) {
+      await supabaseClient.request(
+        `corporate_onboarding_applications_core?company_uid=eq.${encodeURIComponent(company_uid)}`,
+        {
+          method: "PATCH",
+          headers: { "Prefer": "return=minimal" },
+          body: {
+            cif_number: cif.cif_number,
+            dedicated_bic: dedicatedBic,
+            account_number: accounts[0].account_number,
+            updated_at: new Date().toISOString()
+          }
+        }
+      ).catch(() => {});
+    }
+  } catch (e) {
+    console.warn("[PROVISIONING SERVICE] Core activation handoff notice:", e.message);
+  }
+
   return {
     company_uid,
     cif,
     dedicated_bic: dedicatedBic,
     bic_record: bicRecord,
-    accounts
+    accounts,
+    core_activation: activation
   };
 }
 
@@ -171,6 +202,20 @@ router.post("/provision", requireAuth, async (req, res) => {
   }
 });
 
+// Canonical journey statuses (the only three the business tracks):
+//   link_initiated            → invitation sent, customer has not progressed
+//   in_progress_under_review  → onboarding steps underway or submitted for review
+//   account_activated         → approved and fully provisioned in core banking
+function canonicalJourneyStatus(status, coreProvisioned) {
+    if (coreProvisioned || status === "approved" || status === "completed" || status === "account_activated") {
+        return "account_activated";
+    }
+    if (status === "invited" || status === "link_initiated") {
+        return "link_initiated";
+    }
+    return "in_progress_under_review"; // draft, in_progress, submitted, review
+}
+
 // ── 1b. Onboarded applications queue for the Core Banking Console (RM only) ──
 router.get("/applications", requireAuth, async (req, res) => {
   const isRm = Boolean(req.user.is_rm || req.user.role === "RM" || req.user.role === "ADMIN");
@@ -182,10 +227,14 @@ router.get("/applications", requireAuth, async (req, res) => {
     // Enrich with core provisioning status (CIF exists?)
     const customers = await supabaseClient.listCifs();
     const provisionedUids = new Set(customers.map(c => (c.company_uid || "").toUpperCase()));
-    const enriched = applications.map(a => ({
-      ...a,
-      core_provisioned: provisionedUids.has(String(a.company_uid || "").toUpperCase())
-    }));
+    const enriched = applications.map(a => {
+      const coreProvisioned = provisionedUids.has(String(a.company_uid || "").toUpperCase());
+      return {
+        ...a,
+        core_provisioned: coreProvisioned,
+        journey_status: canonicalJourneyStatus(a.status, coreProvisioned)
+      };
+    });
     return res.json({
       success: true,
       count: enriched.length,
