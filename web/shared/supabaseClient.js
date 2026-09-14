@@ -593,6 +593,33 @@ class SupabaseClient {
     }
   }
 
+  async listAllAccounts() {
+    try {
+      const res = await this.request("corporate_accounts?select=*&order=id.asc");
+      return Array.isArray(res.data) ? res.data : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  async listCifs() {
+    try {
+      const res = await this.request("customer_information_files?select=*&order=created_at.desc");
+      return Array.isArray(res.data) ? res.data : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  async listAllTransactions(limit = 500) {
+    try {
+      const res = await this.request(`account_transactions?select=*&order=created_at.desc&limit=${limit}`);
+      return Array.isArray(res.data) ? res.data : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
   async getTransactions(account_number) {
     if (!account_number) return [];
     const cleanAcc = encodeURIComponent(String(account_number).trim());

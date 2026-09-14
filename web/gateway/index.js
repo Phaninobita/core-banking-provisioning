@@ -180,6 +180,11 @@ app.get(["/customer", "/customer/"], (req, res) => {
   res.sendFile(path.join(__dirname, "..", "public", "customer", "index.html"));
 });
 
+// Route /core to the Core Banking Console (CIF, accounts & dedicated BIC provisioning)
+app.get(["/core", "/core/", "/console"], (req, res) => {
+  res.sendFile(path.join(__dirname, "..", "public", "core", "index.html"));
+});
+
 // Static Web Assets
 app.use(express.static(path.join(__dirname, "..", "public")));
 

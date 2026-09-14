@@ -22,6 +22,65 @@ function setCompanyUid(uid) {
     } catch (e) {}
 }
 window.setCompanyUid = setCompanyUid;
+
+// ── CORE BANKING PROFILE LOADER (CIF + dedicated BIC + core accounts) ──
+// Renders the customer's provisioned core banking details into the
+// success-state panel once compliance approves the onboarding application.
+async function loadCoreBankingProfile() {
+    const panel = document.getElementById('coreBankingAccountsPanel');
+    const badge = document.getElementById('coreBankingStatusBadge');
+    if (!panel || !currentCompanyUid) return;
+
+    try {
+        const res = await window.ApexApi.getProvisioningProfile(currentCompanyUid);
+        const provisioned = res && res.success && res.provisioned;
+        if (badge) {
+            badge.innerHTML = provisioned ? '&#x25CF; Core Banking Active' : '&#x25CF; Awaiting Approval';
+        }
+        if (!provisioned) {
+            panel.innerHTML = `
+                <div style="padding:14px 4px;color:var(--text-muted,#93a1b8);font-size:13.5px;line-height:1.7;">
+                    &#x23F3; Your CIF (Customer Information File), core account numbers and dedicated SWIFT BIC
+                    will be generated automatically as soon as the bank approves this application.
+                </div>`;
+            return;
+        }
+
+        const cif = res.cif || {};
+        const accounts = res.accounts || [];
+        panel.innerHTML = `
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:10px 0 14px;">
+                <div style="background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.3);border-radius:12px;padding:14px;">
+                    <div style="font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted,#93a1b8);">CIF Number</div>
+                    <div style="font-size:19px;font-weight:800;font-family:Consolas,monospace;margin-top:4px;">${cif.cif_number || '—'}</div>
+                    <div style="font-size:11.5px;color:var(--text-muted,#93a1b8);margin-top:2px;">Customer Information File · ${cif.kyc_status || 'passed'}</div>
+                </div>
+                <div style="background:rgba(212,175,55,0.07);border:1px solid rgba(212,175,55,0.35);border-radius:12px;padding:14px;">
+                    <div style="font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted,#93a1b8);">Dedicated SWIFT BIC</div>
+                    <div style="font-size:19px;font-weight:800;font-family:Consolas,monospace;margin-top:4px;">${res.dedicated_bic || cif.dedicated_bic || '—'}</div>
+                    <div style="font-size:11.5px;color:var(--text-muted,#93a1b8);margin-top:2px;">Assigned exclusively to your entity</div>
+                </div>
+            </div>
+            ${accounts.map(a => `
+                <div style="background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.3);border-radius:12px;padding:14px;margin-bottom:10px;line-height:1.8;font-size:13.5px;">
+                    <strong>${a.account_name || 'Corporate Checking'}</strong>
+                    <span style="color:var(--text-muted,#93a1b8);"> · ${a.account_type || 'Corporate Checking'}</span><br>
+                    Account Number: <span style="font-family:Consolas,monospace;font-weight:700;">${a.account_number}</span> &nbsp;·&nbsp;
+                    IBAN: <span style="font-family:Consolas,monospace;font-weight:700;">${a.iban}</span><br>
+                    Currency: <strong>${a.currency}</strong> &nbsp;·&nbsp;
+                    Available Balance: <strong>${Number(a.available_balance != null ? a.available_balance : a.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+                    &nbsp;·&nbsp; BIC: <span style="font-family:Consolas,monospace;">${a.bic || res.dedicated_bic || '—'}</span>
+                </div>
+            `).join('')}
+            <div style="font-size:12.5px;color:var(--text-muted,#93a1b8);padding-top:4px;">
+                You can now transact from these accounts in the banking hub and via your dedicated BIC.
+            </div>`;
+    } catch (err) {
+        console.warn('[CORE BANKING] Profile load skipped:', err.message);
+    }
+}
+window.loadCoreBankingProfile = loadCoreBankingProfile;
+
 let currentAppRef = null;
 let isReworkMode = false;
 let isApplicationSubmitted = false;
@@ -4077,6 +4136,9 @@ async function finalizeApp() {
     // Remove the 7 stages on the left and show the submitted state
     setSubmittedViewState(true);
 
+    // Show the core banking panel (awaiting approval until the bank provisions the CIF)
+    loadCoreBankingProfile();
+
     document.querySelectorAll('.step-pill').forEach(p => {
         p.classList.remove('active');
         p.classList.add('done');
@@ -4804,13 +4866,19 @@ window.addEventListener('DOMContentLoaded', async () => {
                 displayClientNameOnTop(compName, record.crn, currentCompanyUid);
 
                 // Rehydrate submission state or navigate to saved step
-                if (record.status === 'submitted') {
+                if (record.status === 'submitted' || record.status === 'approved') {
                     setSubmittedViewState(true);
                     goTo(7);
                     const reviewBody = document.getElementById('reviewBody');
                     const successState = document.getElementById('successState');
                     if (reviewBody) reviewBody.style.display = 'none';
                     if (successState) successState.style.display = 'block';
+                    if (record.status === 'approved') {
+                        const statusPill = document.querySelector('.success-hero-status-pill span:last-child');
+                        if (statusPill) statusPill.textContent = 'Application Approved · Core Banking Account Active';
+                        const heroTitle = document.querySelector('.success-hero-title');
+                        if (heroTitle) heroTitle.textContent = 'Application Approved — Your Accounts Are Ready!';
+                    }
                 } else {
                     setSubmittedViewState(false);
                     if (record.current_step && record.current_step > 1) {
@@ -4819,6 +4887,9 @@ window.addEventListener('DOMContentLoaded', async () => {
                         goTo(1);
                     }
                 }
+
+                // Load CIF / dedicated BIC / core accounts into the success panel
+                loadCoreBankingProfile();
 
                 // Restore Base64 documents from Database table application_documents
                 loadSavedDocuments();

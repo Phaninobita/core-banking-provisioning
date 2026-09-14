@@ -277,6 +277,13 @@
             });
         },
 
+        // ── CORE PROVISIONING SERVICE ──
+        async getProvisioningProfile(companyUid) {
+            return this._fetch(`/api/v1/provisioning/profile/${encodeURIComponent(companyUid || '')}`, {
+                method: 'GET'
+            });
+        },
+
         // ── NOTIFICATION SERVICE ──
         async getSimulatedEmails(email) {
             const query = email ? `?email=${encodeURIComponent(email)}` : '';

@@ -171,6 +171,63 @@ router.post("/provision", requireAuth, async (req, res) => {
   }
 });
 
+// ── 1b. Onboarded applications queue for the Core Banking Console (RM only) ──
+router.get("/applications", requireAuth, async (req, res) => {
+  const isRm = Boolean(req.user.is_rm || req.user.role === "RM" || req.user.role === "ADMIN");
+  if (!isRm) {
+    return res.status(403).json({ error: "Forbidden: only RM executives can view the applications queue." });
+  }
+  try {
+    const applications = await supabaseClient.listApplications();
+    // Enrich with core provisioning status (CIF exists?)
+    const customers = await supabaseClient.listCifs();
+    const provisionedUids = new Set(customers.map(c => (c.company_uid || "").toUpperCase()));
+    const enriched = applications.map(a => ({
+      ...a,
+      core_provisioned: provisionedUids.has(String(a.company_uid || "").toUpperCase())
+    }));
+    return res.json({
+      success: true,
+      count: enriched.length,
+      applications: enriched,
+      service: "provisioning-service"
+    });
+  } catch (err) {
+    return res.status(500).json({ error: `Failed to load applications: ${err.message}` });
+  }
+});
+
+// ── 1c. All provisioned core customers with CIF, BIC & accounts (RM only) ──
+router.get("/customers", requireAuth, async (req, res) => {
+  const isRm = Boolean(req.user.is_rm || req.user.role === "RM" || req.user.role === "ADMIN");
+  if (!isRm) {
+    return res.status(403).json({ error: "Forbidden: only RM executives can view core customers." });
+  }
+  try {
+    const cifs = await supabaseClient.listCifs();
+    const customers = await Promise.all(cifs.map(async (cif) => {
+      const uid = cif.company_uid;
+      const [bicRecord, accounts] = await Promise.all([
+        supabaseClient.getDedicatedBic(uid),
+        supabaseClient.getAccounts(uid)
+      ]);
+      return {
+        ...cif,
+        dedicated_bic: bicRecord ? bicRecord.bic : cif.dedicated_bic,
+        accounts
+      };
+    }));
+    return res.json({
+      success: true,
+      count: customers.length,
+      customers,
+      service: "provisioning-service"
+    });
+  } catch (err) {
+    return res.status(500).json({ error: `Failed to load core customers: ${err.message}` });
+  }
+});
+
 // ── 2. Get full core banking profile (CIF + BIC + accounts) for a company ──
 router.get("/profile/:company_uid", requireAuth, async (req, res) => {
   const company_uid = String(req.params.company_uid || "").trim().toUpperCase();

@@ -319,32 +319,82 @@ async function handleSupabaseRestQuery(text, params = []) {
 
   // 6. account_transactions
   if (sqlUpper.startsWith("INSERT INTO ACCOUNT_TRANSACTIONS")) {
-    return { rows: [{ id: Date.now() }] };
+    // banking-service parameter order: txRef, swiftUetr, accountId, accountNumber,
+    // companyUid, type, amount, currency, counterpartyName, counterpartyIban,
+    // description, category, status, channel
+    const saved = await supabaseClient.saveTransaction({
+      transaction_ref: params[0],
+      swift_uetr: params[1],
+      account_number: params[3],
+      company_uid: params[4],
+      type: params[5],
+      amount: params[6],
+      currency: params[7],
+      counterparty_name: params[8],
+      counterparty_iban: params[9],
+      description: params[10],
+      category: params[11],
+      status: params[12],
+      channel: params[13]
+    });
+    const tx = saved || { id: Date.now() };
+    memStore.transactions.unshift(tx);
+    return { rows: [tx] };
   }
 
   if (sqlUpper.includes("FROM ACCOUNT_TRANSACTIONS")) {
     const userCuid = params.length > 1 ? String(params[0] || "").trim().toUpperCase() : null;
     const limit = parseInt(params[params.length - 1], 10) || 20;
-    let list = memStore.transactions;
+
     if (userCuid) {
-      const callerAccounts = new Set();
+      // Tenant-isolated: pull transactions for each account of this company from Supabase
+      const companyAccounts = await supabaseClient.getAccounts(userCuid);
+      let supaTxs = [];
+      for (const acc of companyAccounts) {
+        const accTxs = await supabaseClient.getTransactions(acc.account_number);
+        supaTxs = supaTxs.concat(accTxs);
+      }
+      if (supaTxs.length > 0) {
+        supaTxs.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+        // Mirror into memory so the transfer fallback stays consistent
+        supaTxs.forEach(t => {
+          if (t.transaction_ref && !memStore.transactions.some(m => m.transaction_ref === t.transaction_ref)) {
+            memStore.transactions.push(t);
+          }
+        });
+        return { rows: supaTxs.slice(0, limit) };
+      }
+      const callerAccounts = new Set(companyAccounts.map(a => a.account_number));
       for (const acc of memStore.accounts.values()) {
         if (!acc.company_uid || acc.company_uid.toUpperCase() === userCuid) {
           callerAccounts.add(acc.account_number);
         }
       }
-      list = list.filter(t => 
+      const list = memStore.transactions.filter(t =>
         (t.company_uid && t.company_uid.toUpperCase() === userCuid) ||
         (t.account_number && callerAccounts.has(t.account_number))
       );
+      return { rows: list.slice(0, limit) };
     }
-    return { rows: list.slice(0, limit) };
+
+    // RM / admin view: all transactions
+    const allTxs = await supabaseClient.listAllTransactions(limit);
+    if (allTxs.length > 0) {
+      return { rows: allTxs.slice(0, limit) };
+    }
+    return { rows: memStore.transactions.slice(0, limit) };
   }
 
   // 7. corporate_accounts
   if (sqlUpper.includes("FROM CORPORATE_ACCOUNTS")) {
     if (sqlUpper.includes("ACCOUNT_NUMBER =") || sqlUpper.includes("ACCOUNT_NUMBER=")) {
       const accNum = String(params[0] || "").trim();
+      // Prefer the persistent Supabase record, fall back to the in-memory mirror
+      const supaAcc = await supabaseClient.getAccountByNumber(accNum);
+      if (supaAcc) {
+        memStore.accounts.set(supaAcc.account_number, supaAcc);
+        return { rows: [supaAcc] };
+      }
       let acc = memStore.accounts.get(accNum);
       if (!acc) {
         for (const a of memStore.accounts.values()) {
@@ -353,10 +403,11 @@ async function handleSupabaseRestQuery(text, params = []) {
       }
       return { rows: acc ? [acc] : [] };
     }
-    const accounts = await supabaseClient.getAccounts(params[0]);
+    const accounts = await supabaseClient.listAllAccounts();
     if (!accounts || accounts.length === 0) {
       return { rows: Array.from(memStore.accounts.values()) };
     }
+    accounts.forEach(a => { if (a.account_number) memStore.accounts.set(a.account_number, a); });
     return { rows: accounts };
   }
 
@@ -364,19 +415,47 @@ async function handleSupabaseRestQuery(text, params = []) {
     // UPDATE corporate_accounts SET balance = balance - $1, available_balance = available_balance - $1, updated_at = NOW() WHERE account_number = $2 AND available_balance >= $1 RETURNING *
     const deductAmount = parseFloat(params[0]);
     const accNum = String(params[1] || "").trim();
-    let acc = memStore.accounts.get(accNum);
+
+    // Source of truth is the persistent Supabase account row
+    let acc = await supabaseClient.getAccountByNumber(accNum);
     if (!acc) {
-      for (const a of memStore.accounts.values()) {
-        if (a.account_number === accNum) { acc = a; break; }
+      acc = memStore.accounts.get(accNum);
+      if (!acc) {
+        for (const a of memStore.accounts.values()) {
+          if (a.account_number === accNum) { acc = a; break; }
+        }
       }
     }
     if (acc) {
       const avail = parseFloat(acc.available_balance || acc.balance || 0);
       if (avail >= deductAmount) {
-        acc.balance = Number((parseFloat(acc.balance) - deductAmount).toFixed(2));
-        acc.available_balance = Number((avail - deductAmount).toFixed(2));
-        acc.updated_at = new Date().toISOString();
-        memStore.accounts.set(acc.account_number, acc);
+        const newBalance = Number((parseFloat(acc.balance) - deductAmount).toFixed(2));
+        const newAvail = Number((avail - deductAmount).toFixed(2));
+
+        // Persist the debit to Supabase
+        try {
+          const patchRes = await supabaseClient.request(
+            `corporate_accounts?account_number=eq.${encodeURIComponent(accNum)}`,
+            {
+              method: "PATCH",
+              headers: { "Prefer": "return=representation" },
+              body: { balance: newBalance, available_balance: newAvail, updated_at: new Date().toISOString() }
+            }
+          );
+          if (Array.isArray(patchRes.data) && patchRes.data.length > 0) {
+            acc = patchRes.data[0];
+          } else {
+            acc.balance = newBalance;
+            acc.available_balance = newAvail;
+            acc.updated_at = new Date().toISOString();
+          }
+        } catch (e) {
+          console.warn("[SUPABASE ROUTER] Account balance PATCH notice:", e.message);
+          acc.balance = newBalance;
+          acc.available_balance = newAvail;
+          acc.updated_at = new Date().toISOString();
+        }
+        memStore.accounts.set(acc.account_number || accNum, acc);
         return { rows: [acc] };
       }
     }
