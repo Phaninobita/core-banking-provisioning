@@ -1,0 +1,23 @@
+# Dependencies & Environment
+node_modules/
+.env
+web/node_modules/
+web/.env
+scratch/
+
+# Mobile & Android Build Artifacts
+mobile/.gradle/
+mobile/build/
+mobile/*/build/
+mobile/local.properties
+mobile/.idea/
+mobile/*.iml
+mobile/.env
+
+android/.gradle/
+android/build/
+android/*/build/
+android/local.properties
+android/.idea/
+android/*.iml
+android/.env

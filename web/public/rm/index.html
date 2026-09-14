@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gringotts Bank &mdash; Relationship Manager Portal | Diagon Alley</title>
+    <link rel="icon" type="image/png" href="/images/bank-logo-dragon.png?v=2">
+    <link rel="stylesheet" href="/rm/rm.css?v=20260913_06">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="rmToastContainer" class="rm-toast-container"></div>
+    <div id="rmLoginView" class="rm-login-wrap">
+        <!-- Ambient Neo-Banking Aurora Mesh (mal.ai style) -->
+        <div class="rm-aurora-bg" aria-hidden="true">
+            <div class="rm-aurora-glow glow-1"></div>
+            <div class="rm-aurora-glow glow-2"></div>
+            <div class="rm-aurora-glow glow-3"></div>
+            <div class="rm-aurora-beam beam-1"></div>
+            <div class="rm-aurora-beam beam-2"></div>
+            <div class="rm-grid-sheen"></div>
+        </div>
+        <div class="rm-login-card" id="rmLoginCard">
+            <div class="rm-card-glare" aria-hidden="true"></div>
+            <div class="rm-login-header">
+                <div class="rm-logo-mark" aria-label="Gringotts Bank Logo">
+                    <img src="/images/bank-logo-dragon.png?v=2" alt="Gringotts Bank Logo" class="rm-logo-img">
+                </div>
+                <h1 class="rm-login-title">Gringotts Bank</h1>
+                <p class="rm-login-sub">Diagon Alley &bull; Vault &amp; Corporate Access</p>
+            </div>
+            <div id="rmLoginAlert" class="rm-alert-box" style="display:none;" role="alert"></div>
+            <form id="rmLoginForm" onsubmit="handleRmLoginSubmit(event)">
+                <div class="rm-form-group">
+                    <label for="rmStaffId">Staff ID</label>
+                    <input type="text" id="rmStaffId" class="rm-input" value="" placeholder="e.g. phanee" required autofocus>
+                </div>
+                <div class="rm-form-group">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <label for="rmPassword" style="margin:0;">Password</label>
+                        <button type="button" id="toggleRmPasswordBtn" onclick="toggleRmPasswordVisibility()" style="background:none; border:none; color:#94a3b8; font-size:11.5px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; padding:0;">
+                            <span id="pwdEyeIcon">&#x1F441;</span> <span id="pwdToggleText">Show Password</span>
+                        </button>
+                    </div>
+                    <div style="position:relative;">
+                        <input type="password" id="rmPassword" class="rm-input" value="" placeholder="Enter secure passkey" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn-login btn-pill-sweep rm-btn-primary rm-btn-block" id="rmLoginSubmitBtn">
+                    <span class="btn-label">Sign In &rarr;</span>
+                </button>
+            </form>
+            <div class="rm-login-footer">
+                Enterprise 256-Bit Encrypted &bull; Internal Bank Intranet Only.<br>Restricted access for authorized Gringotts Relationship Managers.<br>&copy; 2026 Gringotts Bank. Located at Diagon Alley &bull; In reference with Hogwarts Financial Council.
+                <div class="rm-footer-portal-link">
+                    <a href="/" style="color: #fbbf24; font-size: 11.5px; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">&#x1F3E2; Customer Onboarding &amp; Vault Portal &rarr;</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="rmDashboardView" class="rm-dashboard-wrap" style="display:none;">
+        <!-- Ambient Neo-Banking Aurora Mesh for Dashboard Screens (mal.ai style) -->
+        <div class="rm-aurora-bg" aria-hidden="true">
+            <div class="rm-aurora-glow glow-1"></div>
+            <div class="rm-aurora-glow glow-2"></div>
+            <div class="rm-aurora-beam"></div>
+        </div>
+        <header class="rm-navbar">
+            <div class="rm-nav-left">
+                <div class="rm-logo-mark-sm" aria-label="Gringotts Bank Logo">
+                    <img src="/images/bank-logo-dragon.png?v=2" alt="Gringotts Bank Logo" class="rm-logo-img-sm">
+                </div>
+                <div>
+                    <span class="rm-nav-brand">Gringotts Bank</span>
+                    <span class="rm-nav-dept">Diagon Alley &bull; RM Command Center</span>
+                </div>
+            </div>
+            <div class="rm-nav-right">
+                <div class="rm-user-badge">
+                    <div class="rm-avatar">&#x1F464;</div>
+                    <div class="rm-user-info">
+                        <span class="rm-user-name" id="rmTopName">Phanee</span>
+                        <span class="rm-user-title" id="rmTopRole">Senior Relationship Manager &middot; Corporate Banking</span>
+                    </div>
+                </div>
+                <div class="rm-branch-badge">
+                    <span>🏰 Diagon Alley Branch &bull; Hogwarts Advisory</span>
+                </div>
+                <a href="/" target="_blank" class="rm-btn-nav" title="Launch Customer Portal in new window">
+                    &#x1F310; Open Customer Portal
+                </a>
+                <button class="rm-btn-signout" onclick="handleRmSignOut()">
+                    &#x1F6AA; Sign Out
+                </button>
+            </div>
+        </header>
+        <main class="rm-content">
+            <div class="rm-page-header">
+                <div>
+                    <h1 class="rm-page-title">Corporate Client Onboarding Command Center</h1>
+                    <p class="rm-page-sub">Issue tailored corporate client onboarding mandates with automated CRN and email verification.</p>
+                </div>
+                <div class="rm-header-actions">
+                    <button class="rm-btn rm-btn-primary" onclick="focusInviteForm()">+ Initiate Corporate Onboarding</button>
+                </div>
+            </div>
+            <section class="rm-metrics-grid">
+                <div class="rm-metric-card">
+                    <div class="rm-metric-icon" style="background:rgba(56,189,248,0.15); color:#38bdf8;">&#x1F4E4;</div>
+                    <div><div class="rm-metric-num" id="metricTotalInvited">0</div><div class="rm-metric-label">Total Invitations Sent</div></div>
+                </div>
+                <div class="rm-metric-card">
+                    <div class="rm-metric-icon" style="background:rgba(245,158,11,0.15); color:#f59e0b;">&#x23F3;</div>
+                    <div><div class="rm-metric-num" id="metricInProgress">0</div><div class="rm-metric-label">Onboardings In Progress</div></div>
+                </div>
+                <div class="rm-metric-card">
+                    <div class="rm-metric-icon" style="background:rgba(168,85,247,0.15); color:#a855f7;">&#x1F4CB;</div>
+                    <div><div class="rm-metric-num" id="metricInReview">0</div><div class="rm-metric-label">Compliance / KYC Review</div></div>
+                </div>
+                <div class="rm-metric-card">
+                    <div class="rm-metric-icon" style="background:rgba(16,185,129,0.15); color:#10b981;">&#x2705;</div>
+                    <div><div class="rm-metric-num" id="metricActivated">0</div><div class="rm-metric-label">Accounts Activated</div></div>
+                </div>
+            </section>
+            <section class="rm-card rm-dispatch-card" id="dispatchSection">
+                <div class="rm-card-hdr">
+                    <div class="rm-card-title-group">
+                        <span class="rm-card-icon">&#x1F4E7;</span>
+                        <div>
+                            <h2 class="rm-card-title">Issue Corporate Onboarding Invitation</h2>
+                            <p class="rm-card-sub">Enter the corporate client's CRN and registered email to authorize and issue their dedicated onboarding portal access.</p>
+                        </div>
+                    </div>
+                </div>
+                <form id="rmInviteForm" onsubmit="handleDispatchInvite(event)" class="rm-dispatch-form">
+                    <div class="rm-grid-2">
+                        <div class="rm-form-group">
+                            <label for="inviteCrn">Commercial Registration No. (CRN) <span class="rm-req">*</span></label>
+                            <input type="text" id="inviteCrn" class="rm-input" placeholder="e.g. 10029481 or CRN-509077205" required autocomplete="off">
+                            <div id="crnFeedback" class="crn-feedback" style="display:none;"></div>
+                            <small class="rm-hint" id="crnHint">Commercial registration number for corporate verification</small>
+                        </div>
+                        <div class="rm-form-group">
+                            <label for="inviteEmail">Customer Corporate Email <span class="rm-req">*</span></label>
+                            <input type="email" id="inviteEmail" class="rm-input" placeholder="e.g. finance@enterprise.com" required>
+                            <small class="rm-hint">Onboarding link and security notifications will be dispatched here</small>
+                        </div>
+                    </div>
+                    <div class="rm-grid-2">
+                        <div class="rm-form-group">
+                            <label for="inviteCompany">Company Legal Name <span class="rm-req">*</span></label>
+                            <input type="text" id="inviteCompany" class="rm-input" placeholder="e.g. Global Holdings Inc." required>
+                        </div>
+                        <div class="rm-form-group">
+                            <label for="inviteTrade">Trade Name (if different)</label>
+                            <input type="text" id="inviteTrade" class="rm-input" placeholder="Leave blank if same as legal name">
+                        </div>
+                    </div>
+                    <div class="rm-grid-2">
+                        <div class="rm-form-group">
+                            <label for="inviteContact">Authorized Signatory / Contact Person</label>
+                            <input type="text" id="inviteContact" class="rm-input" placeholder="e.g. Michael Vance">
+                        </div>
+                        <div class="rm-form-group">
+                            <label for="invitePhone">Direct Contact Phone</label>
+                            <input type="tel" id="invitePhone" class="rm-input" placeholder="e.g. +1 212 555 0199">
+                        </div>
+                    </div>
+                    <div class="rm-form-group">
+                        <label for="inviteNotes">Internal RM Relationship Notes / Tier</label>
+                        <input type="text" id="inviteNotes" class="rm-input" placeholder="e.g. Tier 1 Conglomerate, priority onboarding VIP fast-track">
+                    </div>
+                    <div class="rm-form-actions">
+                        <button type="button" class="rm-btn rm-btn-ghost" onclick="resetInviteForm()">Clear Form</button>
+                        <button type="submit" class="rm-btn rm-btn-primary" id="btnDispatchInvite">
+                            <span class="btn-label">Issue Corporate Onboarding Invitation &amp; Access Link &rarr;</span>
+                        </button>
+                    </div>
+                </form>
+                <div id="inviteSuccessCard" class="rm-success-box" style="display:none;">
+                    <div class="rm-success-hdr">
+                        <span class="rm-success-badge">&#x2705; Onboarding Invitation Issued &amp; Dispatched</span>
+                        <span class="rm-success-time" id="inviteGeneratedTime">Just now</span>
+                    </div>
+                    <p class="rm-success-msg">A corporate onboarding invitation has been dispatched. You can also copy and send the secure client portal link below to your customer:</p>
+                    <div class="rm-link-wrap">
+                        <input type="text" id="generatedLinkInput" class="rm-link-input" readonly>
+                        <button class="rm-btn rm-btn-copy" onclick="copyGeneratedLink()">&#x1F4CB; Copy Link</button>
+                        <a id="btnTestCustomerLink" href="#" target="_blank" class="rm-btn rm-btn-launch">&#x1F3E2; Open Customer Portal &rarr;</a>
+                    </div>
+                    <div class="rm-success-chips">
+                        <span>CRN: <strong id="chipCrn"></strong></span>
+                        <span>Corporate ID: <strong id="chipCuid" style="color:#f59e0b;"></strong></span>
+                        <span>Email: <strong id="chipEmail"></strong></span>
+                        <span>Status: <strong style="color:#10b981;">Ready to Onboard</strong></span>
+                    </div>
+                </div>
+            </section>
+            <section class="rm-card">
+                <div class="rm-card-hdr">
+                    <div class="rm-card-title-group">
+                        <span class="rm-card-icon">&#x1F4CA;</span>
+                        <div>
+                            <h2 class="rm-card-title">Customer Onboarding Pipeline</h2>
+                            <p class="rm-card-sub">Live status of customer journeys issued by the Relationship Management team.</p>
+                        </div>
+                    </div>
+                    <div class="rm-table-tools">
+                        <input type="text" id="pipelineSearch" class="rm-search-input" placeholder="&#x1F50D; Search by CRN, Email or Company..." oninput="filterPipelineTable()">
+                        <button class="rm-btn rm-btn-ghost rm-btn-sm" onclick="fetchInvitations()">&#x1F504; Refresh Pipeline</button>
+                    </div>
+                </div>
+                <div class="rm-table-wrap">
+                    <table class="rm-table">
+                        <thead>
+                            <tr>
+                                <th>Corporate ID</th>
+                                <th>CRN</th>
+                                <th>Company &amp; Contact</th>
+                                <th>Email</th>
+                                <th>Application Step</th>
+                                <th>Journey Status</th>
+                                <th>Issued On</th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pipelineTableBody">
+                            <tr><td colspan="8" style="text-align:center; padding:32px; color:var(--rm-text-muted);">Loading pipeline records...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+    <div id="updateDetailsModal" class="rm-modal-backdrop" style="display:none;" onclick="closeUpdateDetailsModal(event)">
+        <div class="rm-modal-card" style="max-width:540px;" onclick="event.stopPropagation()">
+            <div class="rm-modal-hdr">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="font-size:20px;">&#x270F;&#xFE0F;</span>
+                    <div>
+                        <h3 style="margin:0; font-size:16px;">Update Customer Details</h3>
+                        <small style="color:var(--rm-text-muted);">Modify registered email address and corporate onboarding parameters</small>
+                    </div>
+                </div>
+                <button class="rm-modal-close" onclick="closeUpdateDetailsModal()">&#x2715;</button>
+            </div>
+            <form id="rmUpdateDetailsForm" onsubmit="handleUpdateDetailsSubmit(event)" style="padding:20px;">
+                <input type="hidden" id="editOriginalCrn">
+                <input type="hidden" id="editOriginalEmail">
+                
+                <div class="rm-form-group" style="margin-bottom:14px;">
+                    <label for="editCrn" style="font-size:12px; font-weight:600; color:#94a3b8; margin-bottom:6px; display:block;">Commercial Registration No. (CRN)</label>
+                    <input type="text" id="editCrn" class="rm-input" style="font-family:monospace; font-weight:700; opacity:0.85;" readonly>
+                </div>
+
+                <div class="rm-form-group" style="margin-bottom:14px;">
+                    <label for="editEmail" style="font-size:12px; font-weight:600; color:#38bdf8; margin-bottom:6px; display:block;">Customer Registered Email Address *</label>
+                    <input type="email" id="editEmail" class="rm-input" style="border-color:#38bdf8; background:rgba(56,189,248,0.06);" required placeholder="e.g. customer@yopmail.com">
+                    <small style="color:#94a3b8; font-size:11px; margin-top:4px; display:block;">Updating this modifies the authorized login identity and recipient mailbox for this customer.</small>
+                </div>
+
+                <div class="rm-form-group" style="margin-bottom:14px;">
+                    <label for="editCompany" style="font-size:12px; font-weight:600; color:#94a3b8; margin-bottom:6px; display:block;">Company Legal Name *</label>
+                    <input type="text" id="editCompany" class="rm-input" required placeholder="Company Legal Name">
+                </div>
+
+                <div class="rm-form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+                    <div class="rm-form-group">
+                        <label for="editContact" style="font-size:12px; font-weight:600; color:#94a3b8; margin-bottom:6px; display:block;">Contact Person</label>
+                        <input type="text" id="editContact" class="rm-input" placeholder="Signatory Name">
+                    </div>
+                    <div class="rm-form-group">
+                        <label for="editPhone" style="font-size:12px; font-weight:600; color:#94a3b8; margin-bottom:6px; display:block;">Phone Number</label>
+                        <input type="tel" id="editPhone" class="rm-input" placeholder="+44 20 ...">
+                    </div>
+                </div>
+
+                <div style="margin-bottom:18px; padding:10px 14px; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:8px; display:flex; align-items:center; gap:10px;">
+                    <input type="checkbox" id="editResendImmediate" style="width:16px; height:16px; cursor:pointer;" checked>
+                    <label for="editResendImmediate" style="font-size:12.5px; color:#a7f3d0; cursor:pointer; margin:0;">
+                        <strong>Dispatch invitation email</strong> to updated email immediately upon saving
+                    </label>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" class="rm-btn rm-btn-ghost" onclick="closeUpdateDetailsModal()">Cancel</button>
+                    <button type="submit" class="rm-btn rm-btn-primary" id="btnSaveUpdatedDetails" style="background:#0284c7;">
+                        💾 Save &amp; Update Customer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="emailPreviewModal" class="rm-modal-backdrop" style="display:none;" onclick="closeEmailPreview(event)">
+        <div class="rm-modal-card" onclick="event.stopPropagation()">
+            <div class="rm-modal-hdr">
+                <h3>&#x2709; Customer Invitation Email Preview</h3>
+                <button class="rm-modal-close" onclick="closeEmailPreview()">&#x2715;</button>
+            </div>
+            <div class="rm-modal-body" id="emailPreviewBody"></div>
+        </div>
+    </div>
+    <div id="rmAuditModal" class="rm-modal-backdrop" style="display:none;" onclick="closeRmAuditModal(event)">
+        <div class="rm-modal-card" style="max-width:960px; max-height:88vh; display:flex; flex-direction:column;" onclick="event.stopPropagation()">
+            <div class="rm-modal-hdr">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="font-size:20px;">&#x1F6E1;&#xFE0F;</span>
+                    <div>
+                        <h3 style="margin:0; font-size:16px;" id="rmAuditTitle">Corporate Compliance Audit Trail</h3>
+                        <small style="color:var(--rm-text-muted);" id="rmAuditSub">Activity and verification history across channels</small>
+                    </div>
+                </div>
+                <button class="rm-modal-close" onclick="closeRmAuditModal()">&#x2715;</button>
+            </div>
+            <div class="rm-modal-body" style="padding:0 20px 20px; overflow-y:auto; flex:1;">
+                <div style="padding:12px 0; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:12px;">
+                    <span style="font-size:12px; color:var(--rm-text-muted);">Events count: <strong id="rmAuditCount" style="color:#ffffff;">0</strong></span>
+                    <button type="button" class="rm-btn rm-btn-ghost rm-btn-sm" onclick="refreshRmAudit()">&#x1F504; Refresh</button>
+                </div>
+                <div id="rmAuditContent">Loading audit trail...</div>
+            </div>
+        </div>
+    </div>
+    <script src="/rm/rm.js?v=20260910_02"></script>
+</body>
+</html>
+

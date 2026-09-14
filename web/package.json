@@ -1,0 +1,22 @@
+{
+  "name": "apex-bank-portal",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "seed": "node db/seed.js",
+    "migrate": "node db/migrate.js",
+    "migrate:stages": "node db/migrate_stages.js",
+    "send:yopmail": "node services/notification-service/yopmailSender.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^8.7.0",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^10.0.1",
+    "pg": "^8.11.5"
+  }
+}

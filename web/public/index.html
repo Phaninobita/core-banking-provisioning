@@ -1,0 +1,1739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gringotts Bank &mdash; Corporate &amp; Vault Account Portal | Diagon Alley</title>
+    <link rel="icon" type="image/png" href="/images/bank-logo-dragon.png?v=2">
+    <link rel="stylesheet" href="/css/style.css?v=20260913_11">
+    <script>
+        const THEME_PALETTES = {
+            cyan: {
+                '--brand-primary': '#00d2ff',
+                '--brand-secondary': '#0ea5e9',
+                '--brand-tertiary': '#38bdf8',
+                '--brand-primary-strong': '#00172e',
+                '--brand-secondary-strong': '#002b52',
+                '--brand-tertiary-strong': '#03497d',
+                '--brand-glow': 'rgba(0, 210, 255, 0.45)',
+                '--brand-glow-subtle': 'rgba(0, 210, 255, 0.18)',
+                '--pill-glow': 'rgba(0, 210, 255, 0.35)',
+                '--border-glass-glow': 'rgba(0, 210, 255, 0.55)',
+                '--primary': '#00d2ff',
+                '--primary-dark': '#0284c7',
+                '--primary-light': '#38bdf8',
+                '--primary-bg': 'rgba(0, 210, 255, 0.15)',
+                '--primary-grad': 'linear-gradient(16.7deg, #00d2ff 9.6%, #0284c7 36.3%, #00172e 92.5%)'
+            },
+            gold: {
+                '--brand-primary': '#fbbf24',
+                '--brand-secondary': '#f59e0b',
+                '--brand-tertiary': '#fde047',
+                '--brand-primary-strong': '#241400',
+                '--brand-secondary-strong': '#451a03',
+                '--brand-tertiary-strong': '#78350f',
+                '--brand-glow': 'rgba(251, 191, 36, 0.55)',
+                '--brand-glow-subtle': 'rgba(251, 191, 36, 0.22)',
+                '--pill-glow': 'rgba(251, 191, 36, 0.42)',
+                '--border-glass-glow': 'rgba(251, 191, 36, 0.65)',
+                '--primary': '#fbbf24',
+                '--primary-dark': '#d97706',
+                '--primary-light': '#fde047',
+                '--primary-bg': 'rgba(251, 191, 36, 0.18)',
+                '--primary-grad': 'linear-gradient(16.7deg, #fbbf24 9.6%, #d97706 36.3%, #241400 92.5%)'
+            },
+            purple: {
+                '--brand-primary': '#c084fc',
+                '--brand-secondary': '#a855f7',
+                '--brand-tertiary': '#e879f9',
+                '--brand-primary-strong': '#19052b',
+                '--brand-secondary-strong': '#2e1065',
+                '--brand-tertiary-strong': '#581c87',
+                '--brand-glow': 'rgba(192, 132, 252, 0.55)',
+                '--brand-glow-subtle': 'rgba(192, 132, 252, 0.22)',
+                '--pill-glow': 'rgba(192, 132, 252, 0.42)',
+                '--border-glass-glow': 'rgba(192, 132, 252, 0.65)',
+                '--primary': '#c084fc',
+                '--primary-dark': '#7e22ce',
+                '--primary-light': '#e879f9',
+                '--primary-bg': 'rgba(168, 85, 247, 0.18)',
+                '--primary-grad': 'linear-gradient(16.7deg, #c084fc 9.6%, #7e22ce 36.3%, #19052b 92.5%)'
+            },
+            mint: {
+                '--brand-primary': '#00f2a9',
+                '--brand-secondary': '#10b981',
+                '--brand-tertiary': '#6ee7b7',
+                '--brand-primary-strong': '#012217',
+                '--brand-secondary-strong': '#064e3b',
+                '--brand-tertiary-strong': '#047857',
+                '--brand-glow': 'rgba(0, 242, 169, 0.55)',
+                '--brand-glow-subtle': 'rgba(0, 242, 169, 0.22)',
+                '--pill-glow': 'rgba(0, 242, 169, 0.42)',
+                '--border-glass-glow': 'rgba(0, 242, 169, 0.65)',
+                '--primary': '#00f2a9',
+                '--primary-dark': '#059669',
+                '--primary-light': '#6ee7b7',
+                '--primary-bg': 'rgba(0, 242, 169, 0.18)',
+                '--primary-grad': 'linear-gradient(16.7deg, #00f2a9 9.6%, #059669 36.3%, #012217 92.5%)'
+            },
+            rose: {
+                '--brand-primary': '#fb7185',
+                '--brand-secondary': '#f43f5e',
+                '--brand-tertiary': '#fda4af',
+                '--brand-primary-strong': '#2b0610',
+                '--brand-secondary-strong': '#4c0519',
+                '--brand-tertiary-strong': '#881337',
+                '--brand-glow': 'rgba(251, 113, 133, 0.55)',
+                '--brand-glow-subtle': 'rgba(251, 113, 133, 0.22)',
+                '--pill-glow': 'rgba(251, 113, 133, 0.42)',
+                '--border-glass-glow': 'rgba(251, 113, 133, 0.65)',
+                '--primary': '#fb7185',
+                '--primary-dark': '#e11d48',
+                '--primary-light': '#fda4af',
+                '--primary-bg': 'rgba(251, 113, 133, 0.18)',
+                '--primary-grad': 'linear-gradient(16.7deg, #fb7185 9.6%, #e11d48 36.3%, #2b0610 92.5%)'
+            }
+        };
+
+        function applyTheme(theme) {
+            var vars = THEME_PALETTES[theme] || THEME_PALETTES.cyan;
+            var root = document.documentElement;
+            root.setAttribute('data-theme', theme);
+            if (document.body) document.body.setAttribute('data-theme', theme);
+            for (var k in vars) {
+                root.style.setProperty(k, vars[k]);
+            }
+        }
+
+        // Anti-flicker & Early Theme Hydration
+        try {
+            var savedTheme = localStorage.getItem('gringotts_login_theme') || 'cyan';
+            applyTheme(savedTheme);
+            if (localStorage.getItem('gb_auth_token') || localStorage.getItem('vb_auth_token')) {
+                document.documentElement.classList.add('has-auth-token');
+            }
+        } catch (e) {}
+
+        function switchLoginTheme(theme) {
+            applyTheme(theme);
+            try { localStorage.setItem('gringotts_login_theme', theme); } catch (e) {}
+            document.querySelectorAll('.theme-swatch-btn').forEach(function(btn) {
+                btn.classList.toggle('active', btn.getAttribute('data-theme-id') === theme);
+            });
+        }
+
+        function previewRingAnimation() {
+            var s1 = document.getElementById('lStep1');
+            var s2 = document.getElementById('lStep2');
+            if (s1 && s2 && !s1.classList.contains('hidden')) {
+                s1.classList.add('hidden');
+                s2.classList.remove('hidden');
+            }
+            var otpRow = document.getElementById('otpInputs');
+            var symbolEl = document.getElementById('otpMorphSymbol');
+            if (!otpRow) return;
+
+            otpRow.classList.remove('loading', 'success-state', 'error-state', 'converging');
+            if (symbolEl) symbolEl.textContent = '';
+            void otpRow.offsetWidth;
+
+            otpRow.classList.add('converging');
+            setTimeout(function() {
+                otpRow.classList.add('loading');
+                setTimeout(function() {
+                    otpRow.classList.remove('loading');
+                    otpRow.classList.add('success-state');
+                    if (symbolEl) symbolEl.textContent = '✓';
+
+                    setTimeout(function() {
+                        otpRow.classList.remove('success-state', 'converging');
+                        if (symbolEl) symbolEl.textContent = '';
+                    }, 2400);
+                }, 850);
+            }, 300);
+        }
+
+        window.addEventListener('DOMContentLoaded', function() {
+            var currentTheme = document.documentElement.getAttribute('data-theme') || 'cyan';
+            applyTheme(currentTheme);
+            document.querySelectorAll('.theme-swatch-btn').forEach(function(btn) {
+                btn.classList.toggle('active', btn.getAttribute('data-theme-id') === currentTheme);
+            });
+        });
+    </script>
+</head>
+<body>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer"></div>
+
+    <!-- Network Status Badge -->
+    <div id="networkStatus">
+        <span id="networkIcon">&#x25CF;</span>
+        <span id="networkText">Online</span>
+    </div>
+
+    <!-- Global Loader Overlay -->
+    <div id="global-loader" role="status" aria-live="polite">
+        <div class="loader-spinner"></div>
+        <p>Processing&hellip;</p>
+    </div>
+
+    <!-- Rework Slide-in Notification -->
+    <div id="reworkNotification" role="alert">
+        <h4>&#x1F504; Rework Mode Activated</h4>
+        <p>Step 4 (Ownership) is unlocked for correction. Other steps are currently locked. Please fix the highlighted errors and resubmit via Step 7.</p>
+        <button class="btn-close-notif" onclick="document.getElementById('reworkNotification').classList.remove('slide-in')">Got it</button>
+    </div>
+
+    <!-- LOGIN OVERLAY -->
+    <div id="loginOverlay" role="dialog" aria-label="Login to Corporate Portal">
+        <!-- Interactive Theme Palette Switcher Bar (Local Preview) -->
+        <div class="theme-preview-pill-bar" id="themePreviewBar" role="toolbar" aria-label="Color Palette Switcher">
+            <span class="theme-bar-title">🎨 Theme:</span>
+            <button type="button" class="theme-swatch-btn active" data-theme-id="cyan" onclick="switchLoginTheme('cyan')" title="Electric Cyan (Current Default)">
+                <span class="swatch-dot" style="background: linear-gradient(135deg, #00d2ff, #0284c7); box-shadow: 0 0 7px #00d2ff;"></span>
+                <span class="swatch-name">Cyan</span>
+            </button>
+            <button type="button" class="theme-swatch-btn" data-theme-id="gold" onclick="switchLoginTheme('gold')" title="Imperial Vault Gold (Swiss Vault & Gringotts Reserve)">
+                <span class="swatch-dot" style="background: linear-gradient(135deg, #fbbf24, #d97706); box-shadow: 0 0 7px #fbbf24;"></span>
+                <span class="swatch-name">Imperial Gold</span>
+            </button>
+            <button type="button" class="theme-swatch-btn" data-theme-id="purple" onclick="switchLoginTheme('purple')" title="Royal Violet (Hyper-Fintech Amethyst)">
+                <span class="swatch-dot" style="background: linear-gradient(135deg, #c084fc, #a855f7); box-shadow: 0 0 7px #c084fc;"></span>
+                <span class="swatch-name">Royal Violet</span>
+            </button>
+            <button type="button" class="theme-swatch-btn" data-theme-id="mint" onclick="switchLoginTheme('mint')" title="Cyber Mint (Neo-Emerald / High-Tech)">
+                <span class="swatch-dot" style="background: linear-gradient(135deg, #00f2a9, #10b981); box-shadow: 0 0 7px #00f2a9;"></span>
+                <span class="swatch-name">Cyber Mint</span>
+            </button>
+            <button type="button" class="theme-swatch-btn" data-theme-id="rose" onclick="switchLoginTheme('rose')" title="Luminous Rose (Luxury Velvet Ruby)">
+                <span class="swatch-dot" style="background: linear-gradient(135deg, #fb7185, #f43f5e); box-shadow: 0 0 7px #fb7185;"></span>
+                <span class="swatch-name">Luminous Rose</span>
+            </button>
+            <button type="button" class="theme-test-btn" onclick="previewRingAnimation()" title="Play live spinner & 360-degree success ring animation">
+                <span>⚡ Test Ring</span>
+            </button>
+        </div>
+
+        <!-- Ambient Aurora Mesh Background Elements (mal.ai inspired) -->
+        <div class="login-aurora-bg" aria-hidden="true">
+            <div class="aurora-glow glow-1"></div>
+            <div class="aurora-glow glow-2"></div>
+            <div class="aurora-glow glow-3"></div>
+            <div class="aurora-beam beam-1"></div>
+            <div class="aurora-beam beam-2"></div>
+            <div class="login-grid-sheen"></div>
+        </div>
+
+        <div class="login-box" id="customerLoginCard">
+            <div class="login-card-glare" aria-hidden="true"></div>
+            <div class="login-header">
+                <div class="logo-mark" aria-label="Gringotts Bank Logo">
+                    <img src="/images/bank-logo-dragon.png?v=2" alt="Gringotts Bank Logo" class="brand-logo-img">
+                </div>
+                <h1>Gringotts Bank</h1>
+                <p>Diagon Alley &bull; Vault &amp; Corporate Access</p>
+            </div>
+            <div id="loginError" class="error-msg" role="alert"></div>
+            <div id="lStep1" class="form-step">
+                <div class="field-group">
+                    <label for="crnInput">Commercial Registration No. (CRN)</label>
+                    <input type="text" id="crnInput" placeholder="e.g. 509077205" autofocus>
+                </div>
+                <div class="field-group">
+                    <label for="emailInput">Registered Email Address</label>
+                    <input type="email" id="emailInput" placeholder="admin@company.com">
+                </div>
+                <button class="btn-login btn-pill-sweep" onclick="handleLoginStep1()">
+                    <span class="btn-label">Request OTP &rarr;</span>
+                </button>
+            </div>
+            <div id="lStep2" class="form-step hidden">
+                <div class="info-badge">
+                    We sent a 4-digit code to <strong id="displayEmail">your email</strong>.
+                    <div style="margin-top: 8px; font-size: 13px; color: var(--brand-primary, #00d2ff); font-weight: 600; display: flex; align-items: center; justify-content: space-between;">
+                        <span>&#x1F511; Access Code: <strong id="displayOtpBadge">1111</strong></span>
+                        <button type="button" onclick="autoFillOtp()" style="font-size: 11px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--brand-primary, #00d2ff); background: rgba(0,210,255,0.12); color: var(--brand-primary, #00d2ff); cursor: pointer; font-weight: 600; transition: all 0.2s;">&#x26A1; Auto-fill</button>
+                    </div>
+                </div>
+                <div class="otp-stage-wrap" id="otpStageWrap">
+                    <div class="otp-row" id="otpInputs" role="group" aria-label="One-time password input">
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" autofocus oninput="handleOtpDigitInput(this, 1)" onkeydown="handleOtpKeyDown(event, this, 1)" onpaste="handleOtpPaste(event)" aria-label="OTP digit 1">
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" oninput="handleOtpDigitInput(this, 2)" onkeydown="handleOtpKeyDown(event, this, 2)" onpaste="handleOtpPaste(event)" aria-label="OTP digit 2">
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" oninput="handleOtpDigitInput(this, 3)" onkeydown="handleOtpKeyDown(event, this, 3)" onpaste="handleOtpPaste(event)" aria-label="OTP digit 3">
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" oninput="handleOtpDigitInput(this, 4)" onkeydown="handleOtpKeyDown(event, this, 4)" onpaste="handleOtpPaste(event)" aria-label="OTP digit 4">
+
+                        <!-- Morphing Loading Spinner & Status Symbol -->
+                        <div class="otp-morph-indicator" id="otpMorphIndicator" aria-hidden="true">
+                            <div class="otp-morph-ring"></div>
+                            <div class="otp-morph-badge">
+                                <span class="otp-morph-symbol" id="otpMorphSymbol"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn-login btn-pill-sweep" onclick="handleOtpSubmit()">
+                    <span class="btn-label">Verify &amp; Enter Portal &rarr;</span>
+                </button>
+                <div class="resend-text">Didn't get the code? <a onclick="resendOtp()" role="button" tabindex="0">Resend OTP</a></div>
+            </div>
+            <div class="footer-text">By continuing, you agree to Gringotts Bank's <a href="#">Terms of Vault Custody</a> and <a href="#">Privacy Policy</a>.<br>&copy; 2026 Gringotts Bank. Located at Diagon Alley &bull; In reference with Hogwarts Financial Council.
+                <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">
+                    <a href="/rm" style="color: #fbbf24; font-size: 11.5px; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">&#x1F517; Relationship Manager &amp; Vault Masters Portal &rarr;</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ---- MAIN APP ---- -->
+    <div class="app-wrap" id="mainApp">
+        <!-- Ambient Aurora Accents for Inside Portal -->
+        <div class="app-aurora-bg" aria-hidden="true">
+            <div class="app-glow app-glow-1"></div>
+            <div class="app-glow app-glow-2"></div>
+        </div>
+
+        <!-- Rework Banner -->
+        <div class="rework-banner" id="reworkBanner" role="status">
+            <div class="rb-icon" aria-hidden="true">&#x26A0;</div>
+            <div class="rb-content">
+                <span class="rb-title">Application Returned for Correction</span>
+                <p class="rb-desc" id="reworkComment">Our compliance team flagged an ownership mismatch. Please verify the ownership structures below and upload required documents.</p>
+                <div class="rb-action">* Only Step 4 (Ownership) and Review are editable. Other steps are currently locked.</div>
+            </div>
+            <button type="button" class="rb-close-btn" onclick="dismissReworkBanner()" title="Exit / Dismiss Rework Mode" aria-label="Exit rework mode">
+                <span class="rb-close-x">&times;</span>
+                <span class="rb-close-text">Exit</span>
+            </button>
+        </div>
+
+        <!-- ---- ONBOARDING PORTAL CONTAINER (MODE: ONBOARDING) ---- -->
+        <div id="onboardingPortalView" class="onboarding-portal-root">
+            <div class="portal-app-shell">
+                <!-- EXECUTIVE LEFT NAVIGATION SIDEBAR -->
+                <aside class="portal-sidebar" id="portalSidebar" role="navigation" aria-label="Application Stepper Navigation">
+                    <div class="sidebar-brand-header">
+                        <div class="sidebar-logo-mark" aria-label="Gringotts Bank Logo">
+                            <img src="/images/bank-logo-dragon.png?v=2" alt="Gringotts Bank Logo" class="sidebar-logo-img">
+                        </div>
+                        <div class="sidebar-brand-text">
+                            <span class="brand-name">Gringotts Bank</span>
+                            <small class="brand-sub" id="hdrBrandSub">Diagon Alley &bull; Hogwarts Vaults</small>
+                        </div>
+                    </div>
+
+                    <!-- Active Corporate Identity & Live Progress Card -->
+                    <div class="sidebar-company-card" id="sidebarCompanyCard">
+                        <div class="scc-identity">
+                            <span class="scc-icon" aria-hidden="true">&#x1F3E2;</span>
+                            <div class="scc-details">
+                                <span class="scc-company-name" id="hdrCompanyName">Corporate Client</span>
+                                <div class="scc-meta-row">
+                                    <span class="scc-crn" id="hdrCrnDisplay">CRN: 509077205</span>
+                                    <span class="scc-cuid" id="hdrCompanyUidDisplay" title="Corporate ID">CUID-509077205</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar inside Sidebar -->
+                        <div class="scc-prog-container">
+                            <div class="scc-prog-header">
+                                <span class="scc-prog-label">Application Progress</span>
+                                <span class="scc-prog-val" id="progPct">14%</span>
+                            </div>
+                            <div class="scc-prog-track" role="progressbar" aria-valuenow="14" aria-valuemin="0" aria-valuemax="100">
+                                <div class="scc-prog-fill prog-fill" id="progFill" style="width:14%"></div>
+                            </div>
+                            <div class="scc-prog-hint">
+                                <span class="save-hint">&#x2713; Draft saved</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vertical Sequential Stepper (1 to 7) -->
+                    <div class="sidebar-stepper" id="stepper" role="tablist" aria-label="Application steps">
+                        <div class="step-pill sidebar-step active" id="spill-1" onclick="goTo(1)" role="tab" aria-selected="true" aria-controls="sc-1" tabindex="0">
+                            <div class="step-node">
+                                <div class="snum" aria-hidden="true">1</div>
+                                <div class="step-line-down"></div>
+                            </div>
+                            <div class="step-body">
+                                <span class="step-label">1. Document Vault</span>
+                                <span class="stime">KYC Uploads &bull; ~5 min</span>
+                            </div>
+                        </div>
+
+                        <div class="step-pill sidebar-step" id="spill-2" onclick="goTo(2)" role="tab" aria-selected="false" aria-controls="sc-2" tabindex="-1">
+                            <div class="step-node">
+                                <div class="snum" aria-hidden="true">2</div>
+                                <div class="step-line-down"></div>
+                            </div>
+                            <div class="step-body">
+                                <span class="step-label">2. Company Profile</span>
+                                <span class="stime">Trade Licence &bull; ~4 min</span>
+                            </div>
+                        </div>
+
+                        <div class="step-pill sidebar-step" id="spill-3" onclick="goTo(3)" role="tab" aria-selected="false" aria-controls="sc-3" tabindex="-1">
+                            <div class="step-node">
+                                <div class="snum" aria-hidden="true">3</div>
+                                <div class="step-line-down"></div>
+                            </div>
+                            <div class="step-body">
+                                <span class="step-label">3. Beneficial Owners</span>
+                                <span class="stime">UBO Identity &bull; ~5 min</span>
+                            </div>
+                        </div>
+
+                        <div class="step-pill sidebar-step" id="spill-4" onclick="goTo(4)" role="tab" aria-selected="false" aria-controls="sc-4" tabindex="-1">
+                            <div class="step-node">
+                                <div class="snum" aria-hidden="true">4</div>
+                                <div class="step-line-down"></div>
+                            </div>
+                            <div class="step-body">
+                                <span class="step-label">4. Ownership Structure</span>
+                                <span class="stime">Cap Table &bull; ~3 min</span>
+                            </div>
+                        </div>
+
+                        <div class="step-pill sidebar-step" id="spill-5" onclick="goTo(5)" role="tab" aria-selected="false" aria-controls="sc-5" tabindex="-1">
+                            <div class="step-node">
+                                <div class="snum" aria-hidden="true">5</div>
+                                <div class="step-line-down"></div>
+                            </div>
+                            <div class="step-body">
+                                <span class="step-label">5. Access &amp; Roles</span>
+                                <span class="stime">Maker / Checker &amp; Signatories &bull; ~2 min</span>
+                            </div>
+                        </div>
+
+                        <div class="step-pill sidebar-step" id="spill-6" onclick="goTo(6)" role="tab" aria-selected="false" aria-controls="sc-6" tabindex="-1">
+                            <div class="step-node">
+                                <div class="snum" aria-hidden="true">6</div>
+                                <div class="step-line-down"></div>
+                            </div>
+                            <div class="step-body">
+                                <span class="step-label">6. Tax &amp; Compliance</span>
+                                <span class="stime">FATCA / CRS &bull; ~3 min</span>
+                            </div>
+                        </div>
+
+                        <div class="step-pill sidebar-step" id="spill-7" onclick="goTo(7)" role="tab" aria-selected="false" aria-controls="sc-7" tabindex="-1">
+                            <div class="step-node">
+                                <div class="snum" aria-hidden="true">7</div>
+                            </div>
+                            <div class="step-body">
+                                <span class="step-label">7. Review &amp; Submit</span>
+                                <span class="stime">Digital Signature &bull; ~2 min</span>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Mobile Backdrop for off-canvas drawer -->
+                <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebarDrawer(false)"></div>
+
+                <!-- MAIN RIGHT CONTENT COLUMN -->
+                <div class="portal-main-column">
+                    <!-- SLIM EXECUTIVE TOPBAR -->
+                    <header class="portal-topbar" role="banner">
+                        <div class="topbar-left">
+                            <!-- Executive Bank Brand Mark (Visible when 7-stage sidebar is removed) -->
+                            <div class="topbar-brand-submitted" id="topbarBrandSubmitted" style="display:none; align-items:center; gap:10px;">
+                                <div class="sidebar-logo-mark" style="width:60px;height:32px;background:#eef2f6;border:1.5px solid rgba(56,130,220,0.6);border-radius:8px;overflow:hidden;box-shadow:0 0 10px rgba(56,130,220,0.45);flex-shrink:0;">
+                                    <img src="/images/bank-logo-dragon.png?v=2" alt="Gringotts Bank Logo" class="sidebar-logo-img" style="width:100%;height:100%;object-fit:cover;display:block;">
+                                </div>
+                                <div style="display:flex; flex-direction:column; justify-content:center;">
+                                    <span style="font-weight:800; font-size:13.5px; color:#ffffff; display:block; line-height:1.2; letter-spacing:-0.2px;">Gringotts Bank</span>
+                                    <small style="color:rgba(255,255,255,0.5); font-size:10.5px; line-height:1.1;">Diagon Alley &bull; Corporate Portal</small>
+                                </div>
+                            </div>
+
+                            <button type="button" class="btn-sidebar-hamburger" id="btnSidebarToggle" onclick="toggleSidebarDrawer()" aria-label="Toggle Sidebar Menu">
+                                <span class="hamburger-bar"></span>
+                                <span class="hamburger-bar"></span>
+                                <span class="hamburger-bar"></span>
+                            </button>
+
+                            <div class="topbar-breadcrumb" id="topbarBreadcrumb">
+                                <span class="topbar-dot" aria-hidden="true"></span>
+                                <span class="topbar-step-pill" id="hdr-step-label">Step 1 of 7</span>
+                                <span class="topbar-sep">&bull;</span>
+                                <span class="topbar-title" id="hdrStepTitle">Document Vault</span>
+                            </div>
+
+                            <!-- Submitted status badge in topbar -->
+                            <div class="topbar-submitted-pill" id="topbarSubmittedPill" style="display:none; align-items:center; gap:8px;">
+                                <span class="topbar-step-pill" style="background:rgba(16,185,129,0.18); border-color:rgba(16,185,129,0.4); color:#34d399; font-weight:700;">
+                                    <span class="live-pulse-dot" style="width:6px;height:6px;background:#10b981;box-shadow:0 0 8px #10b981;border-radius:50%;display:inline-block;margin-right:4px;"></span>
+                                    Application Submitted
+                                </span>
+                                <span class="topbar-sep">&bull;</span>
+                                <span class="topbar-title" style="color:var(--text-secondary);font-size:12.5px;" id="topbarSubmittedMeta">Compliance Verification In Progress</span>
+                            </div>
+                        </div>
+
+                        <div class="topbar-right">
+                            <!-- Corporate Identity badge when submitted -->
+                            <div class="topbar-company-tag" id="topbarCompanyTag" style="display:none; align-items:center; gap:8px; padding:4px 12px; background:rgba(255,255,255,0.04); border:1px solid rgba(0,210,255,0.2); border-radius:999px;">
+                                <span style="font-size:12px;">🏢</span>
+                                <span id="topbarCompanyNameDisplay" style="font-size:12px; font-weight:700; color:#ffffff;">Corporate Client</span>
+                                <span id="topbarCrnDisplay" style="font-size:10.5px; font-family:monospace; color:#38bdf8; background:rgba(0,210,255,0.12); padding:1px 6px; border-radius:4px;">CRN: 509077205</span>
+                            </div>
+
+                            <button type="button" class="btn-hdr-action btn-hdr-rework" id="reworkToggle" onclick="toggleReworkMode()" title="Simulate compliance return for correction">
+                                <span class="hdr-btn-icon">&#x1F504;</span>
+                                <span class="tt-label">Simulate Rework</span>
+                            </button>
+                            <button type="button" class="btn-hdr-action btn-hdr-signout" id="btnSignOut" onclick="handleSignOut()" title="Sign out of Corporate Banking Portal">
+                                <span class="hdr-btn-icon">&#x1F6AA;</span>
+                                <span>Log Out</span>
+                            </button>
+                        </div>
+                    </header>
+
+                    <!-- Form Screens Wrapper -->
+                    <main class="portal-content-body" id="mainScreensBody">
+
+        <!-- ---- SCREEN 1: Documents ---- -->
+        <div class="screen active" id="sc-1" role="tabpanel" aria-labelledby="spill-1">
+            <div class="welcome-hero" id="welcomeHero">
+                <div style="position:relative;">
+                    <div class="particle-container" id="particleContainer" aria-hidden="true"></div>
+                    <div class="hero-split">
+                        <div class="hero-left">
+                            <div class="time-pill">&#x23F1; Estimated time: 20&ndash;25 minutes</div>
+                            <h1 style="font-size:22px;font-weight:800;margin:0 0 8px;color:#ffffff;letter-spacing:-0.4px;">Open Your Corporate Account</h1>
+                            <p style="color:#cbd5e1;font-size:13.5px;margin:0;line-height:1.5;">Upload your business documents below &mdash; you can name each one however you like. All documents are securely verified via banking-grade OCR.</p>
+                        </div>
+                        <div class="hero-right">
+                            <div class="hero-tip-box">
+                                <p style="font-size:11.5px;font-weight:700;color:#93c5fd;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 8px;">&#x1F4CC; Tip: Click the &#x270F; icon to rename each document</p>
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-size:12.5px;color:#f8fafc;">
+                                    <div>&#x1F4C4; Trade Licence</div>
+                                    <div>&#x1F4C4; Certificate of Inc.</div>
+                                    <div>&#x1F4CB; Board Resolution</div>
+                                    <div>&#x1F4D1; Supporting Docs</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="screen-body">
+                <div class="banner banner-info">
+                    <span style="font-size:18px;" aria-hidden="true">&#x1F4A1;</span>
+                    <span><strong>Custom labels:</strong> Type any document name into the dashed field below each upload card. Upload any document and name it however you like.</span>
+                </div>
+                <div class="section-title">&#x1F4C4; Upload Your Documents</div>
+                <div class="section-sub">All uploads are optional. Name each document whatever you wish. PDF, PNG, or JPG accepted. Maximum 20MB per file.</div>
+                <div class="upload-grid">
+                    <!-- Card 1 -->
+                    <div class="upload-card" id="uc-1" onclick="triggerUpload('f-1', event)" ondragover="allowDrop(event)" ondrop="handleFileDrop(event,'uc-1','f-1')">
+                        <input type="file" id="f-1" accept=".pdf,.jpg,.png" onchange="markUploaded('uc-1',this)" aria-label="Upload document">
+                        <div class="opt-badge">Optional</div>
+                        <div class="uc-icon" aria-hidden="true">&#x1F4C4;</div>
+                        <div class="label-edit-wrapper">
+                            <input type="text" class="doc-label-input" placeholder="Name this document..." value="Trade Licence">
+                            <span class="label-edit-icon" aria-hidden="true">&#x270F;</span>
+                        </div>
+                        <div class="file-status"></div>
+                        <small>PDF or image (max 20MB)</small>
+                        <div class="extracts">Click to upload or drag &amp; drop</div>
+                    </div>
+                    <!-- Card 2 -->
+                    <div class="upload-card" id="uc-2" onclick="triggerUpload('f-2', event)" ondragover="allowDrop(event)" ondrop="handleFileDrop(event,'uc-2','f-2')">
+                        <input type="file" id="f-2" accept=".pdf,.jpg,.png" onchange="markUploaded('uc-2',this)" aria-label="Upload document">
+                        <div class="opt-badge">Optional</div>
+                        <div class="uc-icon" aria-hidden="true">&#x1F4C4;</div>
+                        <div class="label-edit-wrapper">
+                            <input type="text" class="doc-label-input" placeholder="Name this document..." value="Certificate of Incorporation">
+                            <span class="label-edit-icon" aria-hidden="true">&#x270F;</span>
+                        </div>
+                        <div class="file-status"></div>
+                        <small>PDF or image (max 20MB)</small>
+                        <div class="extracts">Click to upload or drag &amp; drop</div>
+                    </div>
+                    <!-- Card 3 -->
+                    <div class="upload-card" id="uc-3" onclick="triggerUpload('f-3', event)" ondragover="allowDrop(event)" ondrop="handleFileDrop(event,'uc-3','f-3')">
+                        <input type="file" id="f-3" accept=".pdf,.jpg,.png" onchange="markUploaded('uc-3',this)" aria-label="Upload document">
+                        <div class="opt-badge">Optional</div>
+                        <div class="uc-icon" aria-hidden="true">&#x1F4C4;</div>
+                        <div class="label-edit-wrapper">
+                            <input type="text" class="doc-label-input" placeholder="Name this document..." value="Board Resolution">
+                            <span class="label-edit-icon" aria-hidden="true">&#x270F;</span>
+                        </div>
+                        <div class="file-status"></div>
+                        <small>PDF or image (max 20MB)</small>
+                        <div class="extracts">Click to upload or drag &amp; drop</div>
+                    </div>
+                    <!-- Card 4 -->
+                    <div class="upload-card" id="uc-4" onclick="triggerUpload('f-4', event)" ondragover="allowDrop(event)" ondrop="handleFileDrop(event,'uc-4','f-4')">
+                        <input type="file" id="f-4" accept=".pdf,.jpg,.png" onchange="markUploaded('uc-4',this)" aria-label="Upload document">
+                        <div class="opt-badge">Optional</div>
+                        <div class="uc-icon" aria-hidden="true">&#x1F4C4;</div>
+                        <div class="label-edit-wrapper">
+                            <input type="text" class="doc-label-input" placeholder="Name this document..." value="Supporting Document">
+                            <span class="label-edit-icon" aria-hidden="true">&#x270F;</span>
+                        </div>
+                        <div class="file-status"></div>
+                        <small>PDF or image (max 20MB)</small>
+                        <div class="extracts">Click to upload or drag &amp; drop</div>
+                    </div>
+                </div>
+                <div class="nav-bar">
+                    <button class="btn btn-ghost" disabled aria-disabled="true">&larr; Back</button>
+                    <button class="btn btn-primary" onclick="goTo(2)">Continue to Company Info &rarr;</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ---- SCREEN 2: Company Info ---- -->
+        <div class="screen" id="sc-2" role="tabpanel" aria-labelledby="spill-2">
+            <div class="screen-body">
+                <div class="banner banner-success">
+                    <span style="font-size:18px;" aria-hidden="true">&#x2713;</span>
+                    <span>Please review and fill in your company details below. All fields are optional &mdash; provide whatever information you have available.</span>
+                </div>
+                <div class="section-title">&#x1F3E2; Company Information</div>
+                <div class="section-sub">Fill in the sections below. Auto-filled fields are highlighted &mdash; feel free to edit or leave blank.</div>
+                <div class="sub-wrap">
+                    <div class="sub-nav" role="tablist" aria-label="Company information sections">
+                        <button class="sub-nav-item active" id="snav-details" onclick="switchTab('details')" role="tab" aria-selected="true" aria-controls="tab-details">Company Details <span class="sni-check" id="snav-details-ck" style="display:none">&#x2713;</span></button>
+                        <button class="sub-nav-item" id="snav-address" onclick="switchTab('address')" role="tab" aria-selected="false" aria-controls="tab-address">Address <span class="sni-check" id="snav-address-ck" style="display:none">&#x2713;</span></button>
+                        <button class="sub-nav-item" id="snav-ops" onclick="switchTab('ops')" role="tab" aria-selected="false" aria-controls="tab-ops">Business Operations <span class="sni-check" id="snav-ops-ck" style="display:none">&#x2713;</span></button>
+                        <button class="sub-nav-item" id="snav-vat" onclick="switchTab('vat')" role="tab" aria-selected="false" aria-controls="tab-vat">VAT / Tax <span class="sni-check" id="snav-vat-ck" style="display:none">&#x2713;</span></button>
+                    </div>
+                    <div class="sub-content">
+                        <div class="sub-pane active" id="tab-details" role="tabpanel" aria-labelledby="snav-details">
+                            <div class="g4">
+                                <div class="field">
+                                    <label>Commercial Registration No. <span class="rm-locked-badge">🔒 RM Verified</span></label>
+                                    <input type="text" id="step2_crn" placeholder="e.g. 509077205" readonly class="input-readonly-rm" title="Pre-configured by Relationship Manager in RM Portal (Non-editable)">
+                                </div>
+                                <div class="field">
+                                    <label>Company Name <span class="rm-locked-badge">🔒 RM Verified</span></label>
+                                    <input type="text" id="step2_name" placeholder="Legal Entity Name" readonly class="input-readonly-rm" title="Pre-configured by Relationship Manager in RM Portal (Non-editable)">
+                                </div>
+                                <div class="field">
+                                    <label>Trade Name (if different) <span class="rm-locked-badge">🔒 RM Verified</span></label>
+                                    <input type="text" id="trade_name" placeholder="Leave blank if same" readonly class="input-readonly-rm" title="Pre-configured by Relationship Manager in RM Portal (Non-editable)">
+                                    <span class="help">Pre-configured by Relationship Manager</span>
+                                </div>
+                                <div class="field">
+                                    <label>Legal Type<span class="tooltip-wrap"><span class="tt-icon" aria-label="More information">?</span><span class="tt-popup" role="tooltip">The legal structure of your entity as registered</span></span></label>
+                                    <select id="step2_legal_type">
+                                        <option>Private Limited Company</option>
+                                        <option selected>Public Limited Company (PLC)</option>
+                                        <option>Foundation</option>
+                                        <option>Free Zone Establishment</option>
+                                        <option>Limited Liability Company (LLC)</option>
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label>Licence Issue Date</label>
+                                    <input type="date" id="step2_issue_date" class="auto-filled">
+                                    <span class="auto-badge">&#x26A1; Auto-filled</span>
+                                </div>
+                                <div class="field">
+                                    <label>Licence Expiry Date</label>
+                                    <input type="date" id="step2_expiry_date" class="auto-filled" oninput="evaluateDateInputExpiry(this)" onchange="evaluateDateInputExpiry(this)">
+                                    <span class="auto-badge" id="step2_expiry_badge">&#x26A1; Auto-filled</span>
+                                </div>
+                                <div class="field">
+                                    <label>Authorized Signatory / Primary Contact</label>
+                                    <input type="text" id="step2_contact_person" placeholder="e.g. Michael Vance">
+                                    <span class="help">Optional</span>
+                                </div>
+                                <div class="field">
+                                    <label>Licence Issued By</label>
+                                    <input type="text" id="step2_issued_by" placeholder="e.g. US Federal Reserve (Federal Reserve)" class="auto-filled">
+                                    <span class="auto-badge">&#x26A1; Auto-filled</span>
+                                </div>
+                            </div>
+                            <div class="toggles-row">
+                                <div>
+                                    <span class="tog-label">Is your company listed on any stock exchange?</span>
+                                    <div class="tog-group" role="group" aria-label="Stock exchange listing status">
+                                        <button class="tog-btn" onclick="tog(this)">Yes</button>
+                                        <button class="tog-btn on" onclick="tog(this)">No</button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <span class="tog-label">Is your company wholly owned by the US Federal Government?</span>
+                                    <div class="tog-group" role="group" aria-label="Government ownership status">
+                                        <button class="tog-btn" onclick="tog(this)">Yes</button>
+                                        <button class="tog-btn on" onclick="tog(this)">No</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="text-align:right;margin-top:16px;">
+                                <button class="btn btn-primary" onclick="switchTab('address');markSnav('details')">Next: Address &rarr;</button>
+                            </div>
+                        </div>
+                        <div class="sub-pane" id="tab-address" role="tabpanel" aria-labelledby="snav-address">
+                            <div class="g4">
+                                <div class="field"><label>Building / Unit</label><input type="text" id="step2_building" placeholder="e.g. Tower 1, Suite 402"></div>
+                                <div class="field"><label>Street / Area</label><input type="text" id="step2_street" placeholder="e.g. Commercial District"></div>
+                                <div class="field"><label>City</label><input type="text" id="step2_city" placeholder="e.g. New York"></div>
+                                <div class="field"><label>State</label><input type="text" id="step2_state" placeholder="e.g. New York"></div>
+                                <div class="field"><label>P.O. Box</label><input type="text" id="step2_pobox" placeholder="e.g. 12345"><span class="help">Optional</span></div>
+                                <div class="field"><label>Country</label><select id="step2_country"><option>United Arab Emirates</option><option>United Kingdom</option><option>India</option><option selected>United States</option><option>Singapore</option></select></div>
+                                <div class="field"><label>Corporate Email</label><input type="email" id="step2_email" placeholder="e.g. corporate@company.ae"></div>
+                                <div class="field"><label>Phone Number</label>
+                                    <div style="display:flex;gap:8px;">
+                                        <select id="step2_phone_code" style="width:90px;"><option>+1</option><option>+971</option><option>+44</option><option>+91</option><option>+65</option></select>
+                                        <input type="text" id="step2_phone" placeholder="e.g. 212 555 0199" style="flex:1;">
+                                    </div>
+                                </div>
+                                <div class="field span4" style="grid-column: 1 / -1;">
+                                    <label style="cursor:pointer;display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text-primary);margin-top:4px;">
+                                        <input type="checkbox" checked style="width:18px;height:18px;accent-color:var(--success);"> Business address is the same as registered address above
+                                    </label>
+                                </div>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;margin-top:16px;">
+                                <button class="btn btn-ghost" onclick="switchTab('details')">&larr; Back</button>
+                                <button class="btn btn-primary" onclick="switchTab('ops');markSnav('address')">Next: Operations &rarr;</button>
+                            </div>
+                        </div>
+                        <div class="sub-pane" id="tab-ops" role="tabpanel" aria-labelledby="snav-ops">
+                            <div class="g2" style="align-items: flex-start; gap: 24px; margin-bottom: 16px;">
+                                <div class="field">
+                                    <label>Country of Domicile</label>
+                                    <select id="step2_domicile"><option selected>United States</option><option>United Arab Emirates</option><option>United Kingdom</option><option>Singapore</option></select>
+                                </div>
+                                <div>
+                                    <span class="tog-label">Does the entity operate outside its country of domicile?</span>
+                                    <div class="tog-group" role="group">
+                                        <button class="tog-btn" onclick="tog(this)">Yes</button>
+                                        <button class="tog-btn on" onclick="tog(this)">No</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="ops-list" style="display:none;">
+                                <div class="g2" style="align-items:end;margin-bottom:12px;">
+                                    <div class="field"><label>Country</label><select><option>United Kingdom</option><option>Singapore</option><option>Germany</option></select></div>
+                                    <div class="field"><label>Type of Operation</label><select><option>Subsidiary Company</option><option>Branch</option><option>Representative Office</option></select></div>
+                                </div>
+                            </div>
+                            <button class="btn btn-ghost btn-sm" style="margin-bottom:20px;display:none;" id="btnAddOpsRow" onclick="addOpsRow()">+ Add Country of Operation</button>
+                            <div style="display:flex;justify-content:space-between;margin-top:16px;">
+                                <button class="btn btn-ghost" onclick="switchTab('address')">&larr; Back</button>
+                                <button class="btn btn-primary" onclick="switchTab('vat');markSnav('ops')">Next: VAT &rarr;</button>
+                            </div>
+                        </div>
+                        <div class="sub-pane" id="tab-vat" role="tabpanel" aria-labelledby="snav-vat">
+                            <div class="g2" style="align-items: flex-start; gap: 24px; margin-bottom: 16px;">
+                                <div>
+                                    <span class="tog-label">Is your company registered for VAT / Federal Tax?</span>
+                                    <div class="tog-group" role="group">
+                                        <button class="tog-btn on" onclick="tog(this)">Yes</button>
+                                        <button class="tog-btn" onclick="tog(this)">No</button>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <label>Tax Registration Number (TRN / EIN)</label>
+                                    <input type="text" id="step2_vat_trn" placeholder="e.g. 12-3456789">
+                                    <span class="help">Federal Tax ID / EIN or VAT registration number</span>
+                                </div>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;margin-top:16px;">
+                                <button class="btn btn-ghost" onclick="switchTab('ops')">&larr; Back</button>
+                                <button class="btn btn-success" onclick="markSnav('vat');goTo(3)">&#x2713; Continue &rarr;</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ---- SCREEN 3: UBO Details ---- -->
+        <div class="screen" id="sc-3" role="tabpanel" aria-labelledby="spill-3">
+            <div class="screen-body">
+                <div class="section-title">&#x1F465; Step 3: Owner &amp; Shareholder Identification<span class="pill-count" id="ubo-count" style="display:none;">0 UBOs</span></div>
+                <div class="section-sub">Upload Passports for Individual Ultimate Beneficial Owners (UBOs), or Trade Licences for Corporate Shareholders. All fields are optional.</div>
+
+                <div class="api-key-section" style="background: var(--bg-muted); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px 18px; margin-bottom: 20px; display: flex; gap: 12px; align-items: center; justify-content: space-between;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 20px;">&#x1F6E1;</span>
+        <div>
+            <strong style="font-size: 13px; color: var(--text-primary); display: block;">Secure Banking-Grade OCR Extraction</strong>
+            <span style="font-size: 12px; color: var(--text-muted);">Passports and Trade Licences are securely analyzed via server-side OCR.</span>
+        </div>
+    </div>
+    <span class="auto-badge" style="background: var(--success-bg); color: var(--success-dark); border: 1px solid var(--success-light); font-weight: 600;">&#x1F512; Enterprise Secured</span>
+</div>
+
+                <div id="ubo-upload-phase">
+                    <div class="banner banner-info" style="margin-bottom:24px;">
+                        <span style="font-size:18px;" aria-hidden="true">&#x1F4A1;</span>
+                        <span>Upload passports for individual owners, or trade licences for corporate owners. Document details will be verified and extracted automatically.</span>
+                    </div>
+                    <div id="ubo-passport-boxes" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+                        <div class="upload-card" id="upbox-1" data-type="individual" onclick="triggerUpload('f-upbox-1', event)" style="padding:32px 20px;">
+                            <input type="file" id="f-upbox-1" accept=".pdf,.jpg,.png" onchange="handleDocUpload(1, this)" aria-label="Upload individual passport">
+                            <div style="font-size:28px;margin-bottom:8px;" aria-hidden="true">&#x1F464;</div>
+                            <strong>Upload Passport</strong>
+                            <small>For individual UBOs</small>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:12px;margin-bottom:32px;">
+                        <button class="btn btn-outline btn-sm" onclick="addUploadBox('individual')">+ Add Individual (Passport)</button>
+                        <button class="btn btn-outline btn-sm" onclick="addUploadBox('corporate')">+ Add Corporate (Trade Licence)</button>
+                    </div>
+                    <div class="nav-bar">
+                        <button class="btn btn-ghost" onclick="goTo(2)">&larr; Back</button>
+                        <button class="btn btn-primary" id="btn-extract-ubos" onclick="extractUboData()" disabled>&#x1F4C4; Extract Details</button>
+                    </div>
+                </div>
+
+                <div class="extraction-loader" id="ubo-loader" style="display:none;margin:40px 0;">
+                    <div class="loader-spinner"></div>
+                    <p style="margin:0;color:var(--primary);font-weight:700;font-size:16px;">Reading documents&hellip;</p>
+                    <p style="margin:8px 0 0;color:var(--text-muted);font-size:14px;">Extracting names, dates, and document numbers via OCR</p>
+                </div>
+
+                <div id="ubo-form-phase" style="display:none;">
+                    <div class="banner banner-success">
+                        <span style="font-size:18px;" aria-hidden="true">&#x2713;</span>
+                        <span>Document data successfully extracted. Please review the details below. Ownership percentages will be set in the next step.</span>
+                    </div>
+                    <div class="ubo-cards" id="uboCardsWrap"></div>
+                    <div style="display:flex;gap:12px;margin-bottom:12px;">
+                        <button class="btn btn-outline btn-sm" onclick="addEmptyIndividualCard()">+ Add Individual Manually</button>
+                        <button class="btn btn-outline btn-sm" onclick="addEmptyCorporateCard()">+ Add Corporate Manually</button>
+                    </div>
+                    <div class="nav-bar">
+                        <button class="btn btn-ghost" onclick="resetUboPhase()">&larr; Upload Different Documents</button>
+                        <button class="btn btn-primary" onclick="goTo(4)">Proceed to Ownership Structure &rarr;</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ---- SCREEN 4: Ownership ---- -->
+        <div class="screen" id="sc-4" role="tabpanel" aria-labelledby="spill-4">
+            <div class="screen-body">
+                <div class="section-title">&#x1F3AF; Step 4: Ownership Structure Setup</div>
+                <div class="section-sub">Choose how you'd like to structure your ownership. Use the visual builder or the simple list.</div>
+
+                <div class="view-toggle" role="group" aria-label="Ownership view toggle">
+                    <button class="vt-btn active" id="vt-visual" onclick="setView('visual')" aria-pressed="true">&#x1F5C2; Visual Builder</button>
+                    <button class="vt-btn" id="vt-list" onclick="setView('list')" aria-pressed="false">&#x1F4CB; Simple List</button>
+                </div>
+
+                <div class="visual-view" id="viewVisual">
+                    <!-- Preview Button (Available to replay the demo) -->
+                    <div style="display:flex; justify-content:flex-end; margin-bottom:16px; width:100%;">
+                        <button class="btn btn-outline btn-sm" onclick="showDragDemo()" style="font-size:12px; gap:6px; border-color: var(--primary-light);">
+                            &#x1F3A5; Preview Drag & Drop
+                        </button>
+                    </div>
+                    
+                    <div class="vis-progress-container" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; padding:12px 18px; background:rgba(15,23,42,0.7); border:1px solid rgba(255,255,255,0.08); border-radius:10px;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:12px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">&#x1F4CA; Visual Structure Allocation:</span>
+                            <span id="vis-pct-badge" style="font-size:13px; font-weight:700; color:#38bdf8;">100% Allocated</span>
+                        </div>
+                        <span style="font-size:11px; color:#94a3b8;">&#x1F4A1; Drag entities into boxes &amp; adjust % shareholding directly</span>
+                    </div>
+
+                    <div class="structure-layout">
+                        <div class="entity-pool" id="pool" ondrop="drop(event)" ondragover="allowDrop(event)">
+                            <p style="font-size:13px;font-weight:700;color:var(--text-primary);margin:0 0 16px;letter-spacing:0.02em;">Verified Entities</p>
+                            <div id="pool-cards-container"></div>
+                        </div>
+                        <div class="chart-wrap">
+                            <div style="margin-bottom:24px;width:100%;">
+                                <div class="level-label">LEVEL 1 (Parent Entity)</div>
+                                <div class="level-row" id="lv1-row">
+                                    <div class="drop-zone" ondrop="drop(event)" ondragover="allowDropZone(event)" ondragleave="leaveDrop(event)">
+                                        <button type="button" class="dz-delete-box-btn" title="Delete this box" onclick="event.stopPropagation(); deleteDropZone(this)">&#x2715;</button>
+                                        <span class="dz-placeholder-text">Drop entity here</span>
+                                    </div>
+                                </div>
+                                <button class="btn btn-ghost btn-sm" onclick="addDropZone('lv1-row')" style="margin-top:12px;">+ Add Entity Box</button>
+                            </div>
+                            <div class="connector-line" id="conn-line" style="display:none;"></div>
+                            
+                            <div id="lv2-wrap" style="display:none;width:100%;">
+                                <div class="level-label">LEVEL 2 (Subsidiaries / Underlying UBOs)</div>
+                                <div class="level-row" id="lv2-row">
+                                    <div class="drop-zone" ondrop="drop(event)" ondragover="allowDropZone(event)" ondragleave="leaveDrop(event)">
+                                        <button type="button" class="dz-delete-box-btn" title="Delete this box" onclick="event.stopPropagation(); deleteDropZone(this)">&#x2715;</button>
+                                        <span class="dz-placeholder-text">Drop entity here</span>
+                                    </div>
+                                    <div class="drop-zone" ondrop="drop(event)" ondragover="allowDropZone(event)" ondragleave="leaveDrop(event)">
+                                        <button type="button" class="dz-delete-box-btn" title="Delete this box" onclick="event.stopPropagation(); deleteDropZone(this)">&#x2715;</button>
+                                        <span class="dz-placeholder-text">Drop entity here</span>
+                                    </div>
+                                </div>
+                                <button class="btn btn-ghost btn-sm" onclick="addDropZone('lv2-row')" style="margin-top:12px;">+ Add Entity Box</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="list-view" id="viewList">
+                    <div class="struct-enterprise">
+                        <div style="margin-bottom: 24px; padding: 16px; background: var(--bg-muted); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">Total Allocated Ownership</span>
+                                <span id="pct-total-text" style="font-size: 14px; font-weight: 700; color: var(--warning);">0% / 100%</span>
+                            </div>
+                            <div style="height: 8px; background: var(--border-color); border-radius: 4px; overflow: hidden;">
+                                <div id="pct-fill-bar" style="height: 100%; width: 0%; background: var(--warning); transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);"></div>
+                            </div>
+                        </div>
+
+                        <div class="struct-row" style="font-weight:700;color:var(--text-muted);border-bottom:1px solid var(--border-color);padding-bottom:8px;margin-bottom:16px;align-items:center;animation:none;">
+                            <div>Entity Level</div>
+                            <div>Legal Entity Name</div>
+                            <div>Ownership %</div>
+                        </div>
+
+                        <div id="struct-rows"></div>
+
+                        <div class="struct-actions">
+                            <button class="btn btn-ghost btn-sm" onclick="addStructRowFromPool()">+ Add Entity</button>
+                            <button class="btn btn-danger btn-sm" style="background:transparent;border:1px solid #fca5a5;color:var(--danger);" onclick="removeLastStructRow()">&minus; Remove</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nav-bar">
+                    <button class="btn btn-ghost" onclick="goTo(3)">&larr; Back</button>
+                    <button class="btn btn-primary" onclick="goTo(5)">Proceed to Role Assignment &rarr;</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ---- SCREEN 5: Access & Roles ---- -->
+        <div class="screen" id="sc-5" role="tabpanel" aria-labelledby="spill-5">
+            <div class="screen-body">
+                <div class="section-title">&#x1F510; Access &amp; Governance Roles</div>
+                <div class="section-sub">Assign corporate governance mandates and treasury system access roles to each verified person. Hover over any role for permissions.</div>
+
+                <div class="role-categories-stack">
+                    <!-- Section 1: Corporate Governance Roles -->
+                    <div class="role-category-card">
+                        <div class="role-category-header">
+                            <div class="rch-top-row">
+                                <div>
+                                    <div class="rcg-badge">🏛️ Statutory Governance</div>
+                                    <h3 class="rcg-title">Corporate Governance Roles Matrix</h3>
+                                    <p class="rcg-desc">Designate statutory capacities for verified individuals and entities as mandated by company bylaws and regulatory compliance.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="rcg-pills-row">
+                                <div class="rcg-pill" data-role="board-member">
+                                    <span class="rcg-icon">👔</span>
+                                    <div>
+                                        <strong>Board Member</strong>
+                                        <span>Fiduciary governance & statutory oversight</span>
+                                    </div>
+                                </div>
+                                <div class="rcg-pill" data-role="senior-management">
+                                    <span class="rcg-icon">🏢</span>
+                                    <div>
+                                        <strong>Senior Management</strong>
+                                        <span>Executive C-Suite business leadership</span>
+                                    </div>
+                                </div>
+                                <div class="rcg-pill" data-role="authorised-signatory">
+                                    <span class="rcg-icon">✍️</span>
+                                    <div>
+                                        <strong>Authorised Signatory</strong>
+                                        <span>Executes contracts & bank mandates</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="rtable" id="govTable" aria-label="Corporate governance roles assignment">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 37%;">Legal Entity / Person Name</th>
+                                        <th style="width: 21%;" data-role="board-member">Board Member <span class="role-desc">Sits on board</span> <span class="role-info-hint">ℹ️</span></th>
+                                        <th style="width: 21%;" data-role="senior-management">Senior Management <span class="role-desc">C-suite</span> <span class="role-info-hint">ℹ️</span></th>
+                                        <th style="width: 21%;" data-role="authorised-signatory">Authorised Signatory <span class="role-desc">Signs & binds</span> <span class="role-info-hint">ℹ️</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="govTableBody"></tbody>
+                            </table>
+                        </div>
+
+                        <div class="role-category-footer">
+                            <span class="rcg-tip-icon">💡</span>
+                            <span><strong>Mandate Requirement:</strong> At least one Authorised Signatory is required to bind the entity and execute the banking mandate.</span>
+                        </div>
+                    </div>
+
+                    <!-- Section 2: System Access Roles -->
+                    <div class="role-category-card">
+                        <div class="role-category-header">
+                            <div class="rch-top-row">
+                                <div>
+                                    <div class="rcg-badge" data-role="admin" style="cursor:pointer;" title="Hover to view Portal Administrator capabilities">🔐 Treasury & Security</div>
+                                    <h3 class="rcg-title">Portal System Access &amp; Security Matrix <span data-role="admin" class="rcg-admin-hint" style="cursor:pointer; font-size:11px; font-weight:600; padding:2px 8px; border-radius:12px; background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); vertical-align:middle; margin-left:6px;" title="Hover to inspect Admin role scope">ℹ️ Admin Role Scope</span></h3>
+                                    <p class="rcg-desc">Configure role-based access controls (RBAC) and payment authorization tiers across the Gringotts Bank corporate online portal.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="rcg-pills-row">
+                                <div class="rcg-pill" data-role="admin-maker">
+                                    <span class="rcg-icon">📤</span>
+                                    <div>
+                                        <strong>Admin Maker</strong>
+                                        <span>Drafts & initiates wire payments, payroll & FX</span>
+                                    </div>
+                                </div>
+                                <div class="rcg-pill" data-role="admin-checker">
+                                    <span class="rcg-icon">🔍</span>
+                                    <div>
+                                        <strong>Admin Checker</strong>
+                                        <span>Independently reviews & releases funds</span>
+                                    </div>
+                                </div>
+                                <div class="rcg-pill" data-role="superuser">
+                                    <span class="rcg-icon">🔑</span>
+                                    <div>
+                                        <strong>Superuser</strong>
+                                        <span>Master user management & token controls</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="rtable" id="sysTable" aria-label="System access roles assignment">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 37%;">Legal Entity / Person Name</th>
+                                        <th style="width: 21%;" data-role="admin-maker">Admin Maker <span class="role-desc">Creates & initiates</span> <span class="role-info-hint">ℹ️</span></th>
+                                        <th style="width: 21%;" data-role="admin-checker">Admin Checker <span class="role-desc">Reviews & approves</span> <span class="role-info-hint">ℹ️</span></th>
+                                        <th style="width: 21%;" data-role="superuser">Superuser <span class="role-desc">Full admin access</span> <span class="role-info-hint">ℹ️</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sysTableBody"></tbody>
+                            </table>
+                        </div>
+
+                        <div class="role-category-footer">
+                            <span class="rcg-tip-icon">🛡️</span>
+                            <span><strong>Four-Eyes Principle:</strong> Dual control ensures no single user can both initiate and release corporate funds. Maker and Checker must be distinct verified individuals.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 32px; padding: 20px 24px; border: 1.5px solid var(--border-color); border-radius: var(--radius-lg); background: var(--bg-muted);">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <span style="font-size: 18px;" aria-hidden="true">&#x1F4CB;</span>
+                        <h3 style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0;">Default Maker &amp; Checker Setup</h3>
+                    </div>
+                    <p style="font-size: 14px; color: var(--text-muted); margin: 0 0 16px 0; line-height: 1.6;">
+                        You can assign a default <strong>Finance Maker</strong> (to create and initiate payments) and <strong>Finance Checker</strong> (to review and approve payments). Select an existing UBO from the dropdown, or upload a new document if they were not uploaded previously.
+                    </p>
+                    <div class="tog-group" id="maker-checker-tog" style="margin-bottom: 0;">
+                        <button class="tog-btn" onclick="toggleMakerChecker(this, true)">Yes, assign roles</button>
+                        <button class="tog-btn on" onclick="toggleMakerChecker(this, false)">No, I will assign later</button>
+                    </div>
+
+                    <div id="maker-checker-upload" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+                        <div class="g2" style="margin-bottom: 16px; align-items: start;">
+                            <div class="field" style="margin-bottom: 0;">
+                                <label for="maker-select">Assign Maker Role <span style="font-size: 11px; color: #38bdf8; font-weight: 600;">(Individual Person Only)</span></label>
+                                <select id="maker-select" onchange="onMakerChanged(this)">
+                                    <option value="">&mdash; Select Individual Person &mdash;</option>
+                                </select>
+                                <div id="maker-person-card" class="person-detail-card" style="display: none;"></div>
+                            </div>
+                            <div class="field" style="margin-bottom: 0;">
+                                <label for="checker-select">Assign Checker Role <span style="font-size: 11px; color: #38bdf8; font-weight: 600;">(Individual Person Only)</span></label>
+                                <select id="checker-select" onchange="onCheckerChanged(this)">
+                                    <option value="">&mdash; Select Individual Person &mdash;</option>
+                                </select>
+                                <div id="checker-person-card" class="person-detail-card" style="display: none;"></div>
+                            </div>
+                        </div>
+                        <div class="g2" style="margin-bottom: 0;">
+                            <div class="upload-card" id="uc-maker" onclick="triggerUpload('f-maker', event)" style="padding: 16px; border-style: dashed;">
+                                <input type="file" id="f-maker" accept=".pdf,.jpg,.png" onchange="extractMakerChecker(this, 'maker')" aria-label="Upload Maker passport or ID">
+                                <div class="opt-badge">Optional</div>
+                                <div class="uc-icon" style="font-size: 20px;" aria-hidden="true">&#x1F464;</div>
+                                <span class="file-status"></span>
+                                <div class="uc-prompt-text">
+                                    <strong>Upload new Maker Passport / ID</strong>
+                                    <small>If assigning a new person</small>
+                                </div>
+                            </div>
+                            <div class="upload-card" id="uc-checker" onclick="triggerUpload('f-checker', event)" style="padding: 16px; border-style: dashed;">
+                                <input type="file" id="f-checker" accept=".pdf,.jpg,.png" onchange="extractMakerChecker(this, 'checker')" aria-label="Upload Checker passport or ID">
+                                <div class="opt-badge">Optional</div>
+                                <div class="uc-icon" style="font-size: 20px;" aria-hidden="true">&#x1F464;</div>
+                                <span class="file-status"></span>
+                                <div class="uc-prompt-text">
+                                    <strong>Upload new Checker Passport / ID</strong>
+                                    <small>If assigning a new person</small>
+                                </div>
+                            </div>
+                        </div>
+                        <p style="font-size: 13px; color: var(--text-muted); margin-top: 12px; font-style: italic;">
+                            &#x1F4A1; After assigning roles here, you can tick the corresponding checkboxes in the table above.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="nav-bar">
+                    <button class="btn btn-ghost" onclick="goTo(4)">&larr; Back</button>
+                    <button class="btn btn-primary" onclick="goTo(6)">Proceed to Tax Declaration &rarr;</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ---- SCREEN 6: FATCA / CRS ---- -->
+        <div class="screen" id="sc-6" role="tabpanel" aria-labelledby="spill-6">
+            <div class="screen-body">
+                <div class="section-title">&#x1F310; Tax Compliance Declaration</div>
+                <div class="section-sub">Complete the detailed FATCA and CRS classification forms below to meet international tax compliance.</div>
+
+                <div class="banner banner-info">
+                    <span style="font-size:18px;" aria-hidden="true">&#x1F512;</span>
+                    <span>FATCA (Foreign Account Tax Compliance Act) and CRS (Common Reporting Standard) are international tax regulations. Your answers help us meet our legal obligations. All information is kept strictly confidential.</span>
+                </div>
+
+                <div class="tax-grid">
+                    <div class="fatca-crs-card">
+                        <div class="fq-label">
+                            <span>&#x1F4C4; Part 3: FATCA Classification (US Status)</span>
+                            <span class="fq-badge fatca">FATCA</span>
+                        </div>
+                        <div class="fatca-crs-card" style="box-shadow:none; border-color:transparent; padding:0; margin-bottom:12px;">
+                            <div class="fq-label" style="font-size:14px; margin-bottom:8px;">Is the entity a Specified U.S. Person?</div>
+                            <div class="tog-group" id="fatca-us-person-tog" style="margin-bottom:0;">
+                                <button class="tog-btn" onclick="toggleFATCA_USPerson(this, true)">Yes</button>
+                                <button class="tog-btn on" onclick="toggleFATCA_USPerson(this, false)">No</button>
+                            </div>
+                        </div>
+                        <div id="fatca-us-yes" class="conditional-block">
+                            <div class="g2" style="margin-bottom:12px;">
+                                <div class="field"><label>US Tax Identification Number (US TIN)</label><input type="text" placeholder="e.g. 123-45-6789"></div>
+                                <div class="field">
+                                    <label style="font-weight:600;color:var(--text-muted);margin-bottom:4px;">Form W-9</label>
+                                    <div class="upload-card" id="uc-w9" onclick="triggerUpload('f-w9', event)" style="padding: 12px 16px; text-align:left; display:flex; align-items:center; gap:12px;">
+                                        <input type="file" id="f-w9" accept=".pdf,.jpg,.png" onchange="markUploaded('uc-w9', this)" aria-label="Upload Form W-9">
+                                        <div style="font-size:24px;" aria-hidden="true">&#x1F4CB;</div>
+                                        <div><strong>Upload Form W-9</strong><small style="display:block;color:var(--text-light);">PDF or image</small></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="banner banner-info" style="margin-bottom:0; font-size:12px;">
+                                <span style="font-size:14px;" aria-hidden="true">&#x26A0;</span>
+                                <span>A valid Form W-9 is required to certify your US status. Please upload a clear, signed copy.</span>
+                            </div>
+                        </div>
+                        <div id="fatca-us-no" class="conditional-block active">
+                            <div class="field" style="max-width:340px; margin-bottom:16px;">
+                                <label for="fatca-entity-class">Entity Classification</label>
+                                <select id="fatca-entity-class" onchange="toggleFATCA_EntityClassification()">
+                                    <option value="">&mdash; Select Classification &mdash;</option>
+                                    <option value="FFI">Financial Institution (FFI)</option>
+                                    <option value="NFFE">Non-Financial Foreign Entity (NFFE)</option>
+                                </select>
+                            </div>
+                            <div id="fatca-ffi-details" class="conditional-block" style="border-top:none; padding-top:0;">
+                                <div class="g2">
+                                    <div class="field"><label>FATCA Classification</label><select><option value="">&mdash; Select &mdash;</option><option>Participating FFI</option><option>Nonparticipating FFI</option><option>Reporting Model 1 FFI</option><option>Reporting Model 2 FFI</option></select></div>
+                                    <div class="field"><label>Global Intermediary Identification Number (GIIN)</label><input type="text" placeholder="e.g. 123456.12345.LE.123"><span class="help">The 19-character unique GIIN assigned to your institution</span></div>
+                                </div>
+                            </div>
+                            <div id="fatca-nffe-details" class="conditional-block" style="border-top:none; padding-top:0;">
+                                <div class="fatca-crs-card" style="box-shadow:none; border-color:transparent; padding:0; margin-bottom:0;">
+                                    <div class="fq-label" style="font-size:14px; margin-bottom:8px;">Are you an Active NFFE or a Passive NFFE?</div>
+                                    <div class="tog-group" style="margin-bottom:0;">
+                                        <button class="tog-btn on" onclick="tog(this)">Active NFFE</button>
+                                        <button class="tog-btn" onclick="tog(this)">Passive NFFE</button>
+                                    </div>
+                                    <div class="help" style="margin-top:6px;">Active NFFE = Operating business. Passive NFFE = Holding company / Investment vehicle.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="fatca-crs-card">
+                        <div class="fq-label">
+                            <span>&#x1F310; Part 4: CRS Classification (Global Status)</span>
+                            <span class="fq-badge crs">CRS</span>
+                        </div>
+                        <div class="fatca-crs-card" style="box-shadow:none; border-color:transparent; padding:0; margin-bottom:12px;">
+                            <div class="fq-label" style="font-size:14px; margin-bottom:8px;">Is the entity a Financial Institution?</div>
+                            <div class="tog-group" id="crs-fi-tog" style="margin-bottom:0;">
+                                <button class="tog-btn" onclick="toggleCRS_FI(this, true)">Yes</button>
+                                <button class="tog-btn on" onclick="toggleCRS_FI(this, false)">No</button>
+                            </div>
+                        </div>
+                        <div id="crs-fi-yes" class="conditional-block">
+                            <div class="field" style="max-width:340px;"><label>Financial Institution Type</label><select><option value="">&mdash; Select Type &mdash;</option><option>Investment Entity</option><option>Depository Institution</option><option>Custodial Institution</option><option>Specified Insurance Company</option></select></div>
+                        </div>
+                        <div id="crs-fi-no" class="conditional-block active">
+                            <div class="fatca-crs-card" style="box-shadow:none; border-color:transparent; padding:0; margin-bottom:0;">
+                                <div class="fq-label" style="font-size:14px; margin-bottom:8px;">Select your Non-Financial Entity (NFE) status:</div>
+                                <div class="tog-group" style="margin-bottom:0;">
+                                    <button class="tog-btn on" onclick="tog(this)">Active NFE</button>
+                                    <button class="tog-btn" onclick="tog(this)">Passive NFE</button>
+                                </div>
+                                <div class="help" style="margin-top:6px;">Active = Operating businesses. Passive = Holding companies, investment vehicles.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nav-bar">
+                    <button class="btn btn-ghost" onclick="goTo(5)">&larr; Back</button>
+                    <button class="btn btn-success" onclick="goTo(7)">&#x2713; Complete Declaration &amp; Review &rarr;</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ---- SCREEN 7: Review & Submit ---- -->
+        <div class="screen" id="sc-7" role="tabpanel" aria-labelledby="spill-7">
+            <div class="screen-body" id="reviewBody">
+                <div class="section-title">&#x1F50D; Final Review &amp; Submit</div>
+                <div class="section-sub">Review the summary below, confirm your declarations if you wish, and submit your application.</div>
+                <div class="banner banner-info">
+                    <span style="font-size:18px;" aria-hidden="true">&#x1F4A1;</span>
+                    <span>All sections are optional. Fill in only what you have available. You can submit even with partial information.</span>
+                </div>
+
+                <div class="review-split">
+                    <div class="review-col-left">
+                        <div class="review-accordion">
+                            <div class="ra-hdr" onclick="toggleAccordion('ra1')">
+                                <strong><span class="ra-check" aria-hidden="true">&#x1F4C4;</span> Documents</strong>
+                                <div style="display:flex;align-items:center;gap:12px;">
+                                    <span style="font-size:13px;color:var(--text-muted);" id="ra1-count">0 uploaded</span>
+                                    <button class="ra-edit" onclick="event.stopPropagation();goTo(1)">Edit</button>
+                                </div>
+                            </div>
+                            <div class="ra-body" id="ra1">
+                                <div id="ra1-docs-list"><em>No documents uploaded yet.</em></div>
+                            </div>
+                        </div>
+
+                        <div class="review-accordion">
+                            <div class="ra-hdr" onclick="toggleAccordion('ra2')">
+                                <strong><span class="ra-check" aria-hidden="true">&#x1F3E2;</span> Company Information</strong>
+                                <div style="display:flex;align-items:center;gap:12px;">
+                                    <span style="font-size:13px;color:var(--text-muted);" id="ra2-summary">Not filled</span>
+                                    <button class="ra-edit" onclick="event.stopPropagation();goTo(2)">Edit</button>
+                                </div>
+                            </div>
+                            <div class="ra-body" id="ra2">
+                                <div id="ra2-details"><em>No company information provided.</em></div>
+                            </div>
+                        </div>
+
+                        <div class="review-accordion" id="ra3-wrapper">
+                            <div class="ra-hdr" onclick="toggleAccordion('ra3')">
+                                <strong><span class="ra-check" aria-hidden="true">&#x1F465;</span> Owner &amp; Shareholder Details</strong>
+                                <div style="display:flex;align-items:center;gap:12px;">
+                                    <span style="font-size:13px;color:var(--text-muted);" id="ra3-count">0 entities</span>
+                                    <button class="ra-edit" onclick="event.stopPropagation();goTo(3)">Edit</button>
+                                </div>
+                            </div>
+                            <div class="ra-body" id="ra3"></div>
+                        </div>
+
+                        <div class="review-accordion">
+                            <div class="ra-hdr" onclick="toggleAccordion('ra4')">
+                                <strong><span class="ra-check" aria-hidden="true">&#x1F3AF;</span> Ownership Structure &amp; Roles</strong>
+                                <div style="display:flex;align-items:center;gap:12px;">
+                                    <span style="font-size:13px;color:var(--text-muted);" id="ra4-count">Not configured</span>
+                                    <button class="ra-edit" onclick="event.stopPropagation();goTo(4)">Edit</button>
+                                </div>
+                            </div>
+                            <div class="ra-body" id="ra4"></div>
+                        </div>
+
+                        <div class="review-accordion">
+                            <div class="ra-hdr" onclick="toggleAccordion('ra5')">
+                                <strong><span class="ra-check" aria-hidden="true">&#x1F310;</span> Tax Compliance (FATCA &amp; CRS)</strong>
+                                <div style="display:flex;align-items:center;gap:12px;">
+                                    <span style="font-size:13px;color:var(--text-muted);" id="ra5-summary">Not filled</span>
+                                    <button class="ra-edit" onclick="event.stopPropagation();goTo(6)">Edit</button>
+                                </div>
+                            </div>
+                            <div class="ra-body" id="ra5">
+                                <div id="ra5-details"><em>No tax information provided.</em></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="review-col-right">
+                        <div class="declaration-box">
+                            <p style="font-size:15px;font-weight:700;color:var(--text-primary);margin:0 0 16px;">Declarations &mdash; optional:</p>
+                            <div class="decl-check">
+                                <input type="checkbox" id="d1">
+                                <label for="d1">I confirm that all information provided in this application is accurate, true, and complete to the best of my knowledge.</label>
+                            </div>
+                            <div class="decl-check">
+                                <input type="checkbox" id="d2">
+                                <label for="d2">I authorise Gringotts Bank to verify any information provided and conduct necessary due diligence checks including KYC/AML and Ministry of Magic compliance screening.</label>
+                            </div>
+                            <div class="decl-check">
+                                <input type="checkbox" id="d3">
+                                <label for="d3">I agree to Gringotts Bank's <a href="#" style="color:var(--primary);text-decoration:none;font-weight:600;">Terms &amp; Conditions</a> and <a href="#" style="color:var(--primary);text-decoration:none;font-weight:600;">Vault Privacy Policy</a>.</label>
+                            </div>
+                        </div>
+                        <div class="banner banner-info" style="margin-top:16px;">
+                            <span style="font-size:18px;" aria-hidden="true">&#x270D;</span>
+                            <span>After submitting, you may receive a <strong>DocuSign email</strong> with the Client Agreement documents to e-sign if applicable.</span>
+                        </div>
+                        <div class="nav-bar" style="margin-top:16px; justify-content:space-between;">
+                            <button class="btn btn-ghost" onclick="goTo(6)">&larr; Back</button>
+                            <button class="btn btn-success" id="finalSubmitBtn" style="font-size:16px;padding:14px 28px;" onclick="finalizeApp()">&#x2713; Submit Application</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="successState" style="display:none;">
+                <div class="success-wrap">
+                    <!-- Ambient celebratory hero card -->
+                    <div class="success-hero-card">
+                        <div class="success-anim-wrap">
+                            <div class="success-anim-glow" aria-hidden="true"></div>
+                            <div class="success-anim" aria-hidden="true">&#x2713;</div>
+                        </div>
+                        <div class="success-hero-text">
+                            <div class="success-hero-status-pill">
+                                <span class="live-pulse-dot" aria-hidden="true"></span>
+                                <span>Application Submitted &bull; Compliance Verification In Progress</span>
+                            </div>
+                            <h2 class="success-hero-title">Application Submitted Successfully!</h2>
+                            <p class="success-hero-subtitle">Your corporate account application has been received by Gringotts Bank (Diagon Alley) and is now undergoing regulatory verification and vault compliance checks.</p>
+                            
+                            <div class="success-ref-bar">
+                                <span class="srb-label">Application Reference:</span>
+                                <span class="srb-code app-ref" id="successAppRefBadge">AB-2026-001245</span>
+                                <button type="button" class="btn-copy-ref" onclick="copyAppRef(this)" title="Copy Reference to clipboard">
+                                    <span class="cr-icon">&#x1F4CB;</span>
+                                    <span class="copy-text">Copy</span>
+                                </button>
+                                <span class="srb-sep">&bull;</span>
+                                <span class="srb-info">&#x2709; Confirmation delivered to registered email</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2-COLUMN BALANCED DASHBOARD GRID -->
+                    <div class="success-dashboard-grid">
+                        <!-- Left Column: Application Status Timeline -->
+                        <div class="success-col-timeline">
+                            <div class="success-section-card">
+                                <div class="ssc-header">
+                                    <div class="ssc-title-wrap">
+                                        <span class="ssc-icon">&#x1F4C5;</span>
+                                        <div>
+                                            <h3 class="ssc-title">Application Status Timeline</h3>
+                                            <p class="ssc-sub">Real-time status of your compliance review and account onboarding.</p>
+                                        </div>
+                                    </div>
+                                    <span class="ssc-badge-live">&#x25CF; Active Pipeline</span>
+                                </div>
+
+                                <div class="timeline-container">
+                                    <div class="timeline-line" aria-hidden="true"></div>
+                                    
+                                    <!-- Step 1 -->
+                                    <div class="timeline-step timeline-step-1">
+                                        <div class="timeline-icon" aria-hidden="true">&#x1F50D;</div>
+                                        <div class="timeline-content">
+                                            <div class="timeline-badge">IN PROGRESS</div>
+                                            <h4 class="timeline-title">Application Under Review</h4>
+                                            <p class="timeline-desc">Our Bank Onboarding team is currently verifying your submitted corporate documents and entity details.</p>
+                                            <div class="timeline-items">
+                                                <div class="timeline-item"><span class="ti-check">&#x2713;</span><span>Document OCR validation &amp; authenticity check</span></div>
+                                                <div class="timeline-item"><span class="ti-check">&#x2713;</span><span>AML / KYC regulatory screening in progress</span></div>
+                                                <div class="timeline-item"><span class="ti-check">&#x2713;</span><span>Estimated turnaround: 24&ndash;48 hours</span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Step 2 -->
+                                    <div class="timeline-step timeline-step-2">
+                                        <div class="timeline-icon" aria-hidden="true">&#x1F4DD;</div>
+                                        <div class="timeline-content">
+                                            <div class="timeline-badge">PENDING</div>
+                                            <h4 class="timeline-title">Authorised Signatory Review &amp; E-Signature</h4>
+                                            <p class="timeline-desc">Once initial bank review completes, dispatch digital DocuSign packages to authorised signatories.</p>
+
+                                            <div id="docusign-action-area" class="docusign-action-box">
+                                                <div class="ds-action-text">
+                                                    <strong>Ready to request digital signatures?</strong>
+                                                    <small>Dispatch signature links to all designated corporate signatories.</small>
+                                                </div>
+                                                <button class="btn btn-primary btn-sm btn-pill-sweep" id="btn-trigger-docusign" onclick="triggerDocuSign()">
+                                                    <span class="btn-label">&#x1F4E7; Send DocuSign Invites &rarr;</span>
+                                                </button>
+                                            </div>
+
+                                            <div class="timeline-items" id="docusign-status-items">
+                                                <div class="timeline-item"><span class="ti-amber">&#x23F3;</span><span>Awaiting manual dispatch or verification clearance</span></div>
+                                            </div>
+
+                                            <div class="timeline-alert" id="docusign-alert" style="display: none;">
+                                                <strong>&#x1F514; Action Required:</strong> Remind signatories to check their inbox for invitations from <strong>documents@docusign.net</strong>.
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Step 3 -->
+                                    <div class="timeline-step timeline-step-3">
+                                        <div class="timeline-icon" aria-hidden="true">&#x1F389;</div>
+                                        <div class="timeline-content">
+                                            <div class="timeline-badge">FINAL STEP</div>
+                                            <h4 class="timeline-title">Account Activated &amp; Ready to Use</h4>
+                                            <p class="timeline-desc">Congratulations! Your Gringotts Bank corporate vault credentials, IBANs, and multi-currency vault allocations will be released.</p>
+                                            <div class="timeline-items">
+                                                <div class="timeline-item"><span class="ti-green">&#x2713;</span><span>Corporate IBAN &amp; SWIFT routing instructions provided</span></div>
+                                                <div class="timeline-item"><span class="ti-green">&#x2713;</span><span>Online banking administrator login activated</span></div>
+                                                <div class="timeline-item"><span class="ti-green">&#x2713;</span><span>Corporate debit card dispatched to business address</span></div>
+                                            </div>
+                                            <div class="timeline-alert alert-final">
+                                                <strong>&#x1F3AF; You're all set!</strong> Start transacting immediately upon completion. Your Relationship Manager will follow up.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column: Dedicated RM & Quick Actions & Uploads -->
+                        <div class="success-col-sidebar">
+                            <!-- Executive RM Card -->
+                            <div class="success-side-card rm-side-card">
+                                <div class="rm-card-header">
+                                    <span class="rm-card-badge">&#x1F6E1; Dedicated Vault Coverage</span>
+                                </div>
+                                <div class="rm-card-body">
+                                    <div class="rm-avatar-wrapper">
+                                        <div class="rm-avatar" aria-hidden="true">&#x1F9DD;</div>
+                                        <span class="rm-online-dot" title="Online & Available"></span>
+                                    </div>
+                                    <div class="rm-info">
+                                        <h4 class="rm-name">Bogrod &amp; Griphook</h4>
+                                        <span class="rm-title">Senior Vault Masters &bull; Diagon Alley Branch</span>
+                                        <p class="rm-desc">Assigned primary vault coverage for your onboarding, multi-currency treasury setup (Galleons, USD, EUR, GBP), and Hogwarts endowment facilities.</p>
+                                    </div>
+                                </div>
+                                <div class="rm-contacts-list">
+                                    <a href="tel:+442079460190" class="rm-contact-chip">
+                                        <span class="rcc-icon">&#x1F4DE;</span>
+                                        <span>+44 20 7946 0190 (Diagon Alley)</span>
+                                    </a>
+                                    <a href="mailto:vaults@gringotts.co.uk" class="rm-contact-chip">
+                                        <span class="rcc-icon">&#x2709;</span>
+                                        <span>vaults@gringotts.co.uk</span>
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Official Submission Actions -->
+                            <div class="success-side-card actions-side-card">
+                                <div class="side-card-title-row">
+                                    <span class="side-card-icon">&#x1F4C1;</span>
+                                    <h4 class="side-card-title">Application Records</h4>
+                                </div>
+                                <p class="side-card-desc">Download your signed application receipt or print a full disclosure summary for your company compliance records.</p>
+                                <div class="side-actions-group">
+                                    <button type="button" class="btn-side-action btn-receipt" onclick="downloadReceipt()">
+                                        <span class="bsa-icon">&#x1F4E5;</span>
+                                        <div class="bsa-text">
+                                            <strong>Download Receipt</strong>
+                                            <small>Official timestamp &amp; reference</small>
+                                        </div>
+                                    </button>
+                                    <button type="button" class="btn-side-action btn-print" onclick="window.print()">
+                                        <span class="bsa-icon">&#x1F5A8;</span>
+                                        <div class="bsa-text">
+                                            <strong>Print Summary</strong>
+                                            <small>Complete disclosure &amp; form copy</small>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Upload Additional Documents Vault -->
+                            <div class="success-side-card forgotten-docs-side-card" id="forgottenDocsSection">
+                                <div class="fd-side-hdr">
+                                    <span class="fd-side-icon">&#x1F4C4;</span>
+                                    <div>
+                                        <h4 class="side-card-title">Upload Additional Docs</h4>
+                                        <p class="side-card-desc">Forgot to attach any documents? Submit any remaining files anytime below.</p>
+                                    </div>
+                                </div>
+                                <div class="fd-compact-grid" id="fdUploadGrid">
+                                    <div class="fd-upload-card" id="fd-uc-1" onclick="triggerUpload('fd-f-1', event)" ondragover="allowDrop(event)" ondrop="handleFileDrop(event,'fd-uc-1','fd-f-1')">
+                                        <input type="file" id="fd-f-1" accept=".pdf,.jpg,.png" onchange="markUploaded('fd-uc-1',this)" aria-label="Upload additional document 1">
+                                        <div class="opt-badge" id="fdBadge1">Optional</div>
+                                        <div class="fdu-icon" aria-hidden="true">&#x1F4C4;</div>
+                                        <strong id="fdLabel1">Additional Doc 1</strong>
+                                        <small>PDF or image</small>
+                                    </div>
+                                    <div class="fd-upload-card" id="fd-uc-2" onclick="triggerUpload('fd-f-2', event)" ondragover="allowDrop(event)" ondrop="handleFileDrop(event,'fd-uc-2','fd-f-2')">
+                                        <input type="file" id="fd-f-2" accept=".pdf,.jpg,.png" onchange="markUploaded('fd-uc-2',this)" aria-label="Upload additional document 2">
+                                        <div class="opt-badge" id="fdBadge2">Optional</div>
+                                        <div class="fdu-icon" aria-hidden="true">&#x1F4C4;</div>
+                                        <strong id="fdLabel2">Additional Doc 2</strong>
+                                        <small>PDF or image</small>
+                                    </div>
+                                    <div class="fd-upload-card" id="fd-uc-3" onclick="triggerUpload('fd-f-3', event)" ondragover="allowDrop(event)" ondrop="handleFileDrop(event,'fd-uc-3','fd-f-3')">
+                                        <input type="file" id="fd-f-3" accept=".pdf,.jpg,.png" onchange="markUploaded('fd-uc-3',this)" aria-label="Upload additional document 3">
+                                        <div class="opt-badge" id="fdBadge3">Optional</div>
+                                        <div class="fdu-icon" aria-hidden="true">&#x1F4C4;</div>
+                                        <strong id="fdLabel3">Additional Doc 3</strong>
+                                        <small>PDF or image</small>
+                                    </div>
+                                    <div class="fd-upload-card" id="fd-uc-4" onclick="triggerUpload('fd-f-4', event)" ondragover="allowDrop(event)" ondrop="handleFileDrop(event,'fd-uc-4','fd-f-4')">
+                                        <input type="file" id="fd-f-4" accept=".pdf,.jpg,.png" onchange="markUploaded('fd-uc-4',this)" aria-label="Upload additional document 4">
+                                        <div class="opt-badge" id="fdBadge4">Optional</div>
+                                        <div class="fdu-icon" aria-hidden="true">&#x1F4C4;</div>
+                                        <strong id="fdLabel4">Additional Doc 4</strong>
+                                        <small>PDF or image</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+                    </main> <!-- /#mainScreensBody -->
+                </div> <!-- /.portal-main-column -->
+            </div> <!-- /.portal-app-shell -->
+        </div> <!-- /#onboardingPortalView -->
+
+    </div>
+
+
+    <!-- Modals -->
+    <div class="modal-overlay" id="saveModal" role="dialog" aria-modal="true" aria-labelledby="saveModalTitle">
+        <div class="modal-box">
+            <div class="modal-title" id="saveModalTitle">&#x1F4BE; Progress Saved</div>
+            <div class="modal-body">Your application has been saved securely in the Gringotts Bank vault repository. You can return anytime using the link sent to <strong>admin@company.com</strong>.<br><br><strong>Vault Address:</strong> Diagon Alley (Ref: Hogwarts Financial Council)<br><br><strong>Resume link:</strong><br><code>https://onboarding.gringotts.com/resume/GB-DRAFT-2026-001245</code></div>
+            <div class="modal-footer"><button class="btn btn-primary" onclick="closeModal('saveModal')">Got it</button></div>
+        </div>
+    </div>
+    <div class="modal-overlay" id="inviteModal" role="dialog" aria-modal="true" aria-labelledby="inviteModalTitle">
+        <div class="modal-box">
+            <div class="modal-title" id="inviteModalTitle">&#x2709; Send Invite to <span id="inviteName"></span></div>
+            <div class="modal-body">Enter the email address of the UBO. They'll receive a secure, private link to fill in only their personal details and upload their passport &mdash; without seeing the rest of the application.
+                <div class="field" style="margin-top:18px;">
+                    <label for="inviteEmail">Email Address</label>
+                    <input type="email" id="inviteEmail" placeholder="uboperson@example.com">
+                </div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('inviteModal')">Cancel</button><button class="btn btn-primary" onclick="sendInvite()">Send Invite Link &rarr;</button></div>
+        </div>
+    </div>
+    <div class="modal-overlay" id="inviteSentModal" role="dialog" aria-modal="true" aria-labelledby="inviteSentTitle">
+        <div class="modal-box">
+            <div class="modal-title" id="inviteSentTitle">&#x2705; Invite Sent!</div>
+            <div class="modal-body">A secure link has been sent to the UBO. You'll be notified when they complete their section. You can continue filling in the rest of the application in the meantime.</div>
+            <div class="modal-footer"><button class="btn btn-primary" onclick="closeModal('inviteSentModal')">Continue</button></div>
+        </div>
+    </div>
+
+    <div class="autosave" id="autosave" role="status" aria-live="polite">&#x2713; Progress saved</div>
+
+    <!-- ---- FLOATING REAL-TIME EMAIL SIMULATOR ---- -->
+    <div id="demoMailboxWidget">
+        <!-- Floating Launcher Pill Button -->
+        <button id="demoMailboxBtn" type="button" onclick="toggleMailboxPanel()" aria-label="Open Gringotts Bank Virtual Mailbox Simulator" title="Gringotts Bank Simulated Live Mailbox">
+            <span class="mailbox-icon" aria-hidden="true">&#x1FA84;</span>
+            <span class="mailbox-title">Gringotts Mailbox</span>
+            <span id="mailboxUnreadBadge" class="mailbox-badge" style="display:none;">0</span>
+        </button>
+
+        <!-- Slide-in Incoming Email Toast Notification -->
+        <div id="incomingEmailAlert" class="email-alert-toast" style="display:none;" onclick="openMailboxAndSelectLatest()">
+            <div class="alert-icon" aria-hidden="true">&#x1F4E8;</div>
+            <div class="alert-body">
+                <div class="alert-header">
+                    <span class="alert-tag">New Email</span>
+                    <span class="alert-time">Just now</span>
+                </div>
+                <div id="alertSubject" class="alert-subject">Gringotts Bank &mdash; Your Access Code</div>
+                <div id="alertSender" class="alert-sender">From: onboarding@gringotts.com</div>
+                <div id="alertSnippet" class="alert-snippet">Click to view incoming email &amp; auto-fill OTP code</div>
+            </div>
+            <button type="button" class="alert-close" onclick="event.stopPropagation(); dismissEmailAlert();" aria-label="Dismiss">&times;</button>
+        </div>
+
+        <!-- Expandable In-Browser Inbox Panel -->
+        <div id="demoMailboxPanel" class="mailbox-panel" style="display:none;" role="dialog" aria-modal="false" aria-label="Gringotts Bank Simulated Email Inbox">
+            <div class="mb-panel-header">
+                <div class="mb-header-left">
+                    <div class="mb-avatar" aria-hidden="true">&#x1FA84;</div>
+                    <div>
+                        <div class="mb-header-title">Gringotts Bank Virtual Mailbox</div>
+                        <div class="mb-header-sub">Diagon Alley Dispatch &bull; <span id="mailboxStatusText" class="status-live">&#x25CF; Live</span></div>
+                    </div>
+                </div>
+                <div class="mb-header-actions">
+                    <button type="button" class="btn-mb-action" onclick="clearLiveMailbox()" title="Clear simulated inbox">&#x1F5D1; Clear</button>
+                    <button type="button" class="btn-mb-close" onclick="toggleMailboxPanel(false)" aria-label="Close mailbox">&times;</button>
+                </div>
+            </div>
+
+            <!-- Panel Body -->
+            <div class="mb-panel-body">
+                <!-- Inbox List View -->
+                <div id="mbListView" class="mb-list-view">
+                    <div class="mb-list-toolbar">
+                        <span class="mb-count-label">Inbox (<span id="mbCount">0</span>)</span>
+                        <span class="mb-sync-indicator"><span class="pulse-dot"></span> Auto-Sync</span>
+                    </div>
+                    <div id="mbEmailList" class="mb-email-items">
+                        <div class="mb-empty-state">
+                            <div class="empty-icon" aria-hidden="true">&#x1F4ED;</div>
+                            <div class="empty-title">Simulated Inbox Ready</div>
+                            <div class="empty-desc">Request an OTP code, trigger DocuSign, or submit an application to see emails arrive here instantly.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Email Reader View -->
+                <div id="mbReaderView" class="mb-reader-view" style="display:none;">
+                    <div class="mb-reader-header">
+                        <button type="button" class="btn-mb-back" onclick="backToInboxList()">&larr; Back to Inbox</button>
+                        <span id="mbReaderTimestamp" class="mb-reader-time">Just now</span>
+                    </div>
+                    <div class="mb-email-meta">
+                        <div class="meta-row"><strong>From:</strong> <span id="mbReaderFrom">onboarding@gringotts.com</span></div>
+                        <div class="meta-row"><strong>To:</strong> <span id="mbReaderTo">applicant@corporate.ae</span></div>
+                        <div class="meta-row"><strong>Subject:</strong> <span id="mbReaderSubject">Gringotts Bank Access Code</span></div>
+                    </div>
+                    <div id="mbReaderActionBanner" class="mb-reader-action-banner" style="display:none;">
+                        <!-- Auto-filled by JS for OTP / DocuSign actions -->
+                    </div>
+                    <div id="mbReaderContent" class="mb-reader-body">
+                        <!-- HTML email body rendered here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ---- FULL-SCREEN DOCUMENT PREVIEW MODAL (BASE64) ---- -->
+    <div class="doc-preview-modal-overlay" id="docPreviewModal" role="dialog" aria-modal="true" aria-labelledby="docPreviewTitle">
+        <div class="doc-preview-box">
+            <div class="doc-preview-header">
+                <div class="doc-preview-title">
+                    <span>📄</span>
+                    <span id="docPreviewTitle">Document Preview</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <a id="docPreviewExternalLink" href="#" target="_blank" class="btn btn-ghost btn-sm" style="display:none;font-size:12px;text-decoration:none;padding:5px 12px;border:1px solid rgba(56,189,248,0.3);color:#38bdf8;border-radius:6px;">↗️ Full View</a>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="closeDocPreview()" style="font-size:18px;line-height:1;padding:4px 8px;">✕</button>
+                </div>
+            </div>
+            <div class="doc-preview-content" id="docPreviewContent">
+                <!-- Base64 image or PDF embedded here -->
+            </div>
+            <div class="doc-preview-footer">
+                <div id="docPreviewMeta" style="font-size:12px;color:#94a3b8;">
+                    <span>Secure Document Storage</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <button type="button" id="docPreviewDownloadBtn" class="btn btn-secondary btn-sm" onclick="downloadCurrentPreviewDoc()" style="display:inline-flex;align-items:center;gap:6px;background:rgba(56,189,248,0.15);border:1px solid #38bdf8;color:#38bdf8;">
+                        📥 Download from Database
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="closeDocPreview()">
+                        Close Preview
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ---- COMPREHENSIVE AUDIT TRAIL MODAL (PORTED FROM MOBILE / COMPLIANCE SYSTEM) ---- -->
+    <div class="modal-backdrop" id="auditTrailModal" style="display:none; position:fixed; inset:0; background:rgba(3,7,18,0.85); backdrop-filter:blur(8px); z-index:11000; align-items:center; justify-content:center; padding:16px;">
+        <div class="audit-modal-box" style="background:rgba(2, 13, 30, 0.95); border:1px solid rgba(0, 210, 255, 0.35); border-radius:16px; width:100%; max-width:960px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 32px 80px rgba(0,0,0,0.9), 0 0 35px rgba(0, 210, 255, 0.15); overflow:hidden; position:relative;">
+            <!-- Modal Header -->
+            <div style="padding:18px 24px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:linear-gradient(90deg, rgba(15,23,42,1) 0%, rgba(30,41,59,0.8) 100%);">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="width:38px; height:38px; border-radius:10px; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); display:flex; align-items:center; justify-content:center; font-size:18px; color:#38bdf8;">🛡️</div>
+                    <div>
+                        <h3 style="margin:0; font-size:17px; font-weight:700; color:#ffffff; display:flex; align-items:center; gap:8px;">
+                            Corporate Compliance Audit Trail
+                            <span id="auditModalCuidBadge" style="font-size:11px; font-weight:600; color:#f59e0b; background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); padding:2px 8px; border-radius:12px; font-family:monospace;"></span>
+                        </h3>
+                        <p style="margin:2px 0 0; font-size:12px; color:#94a3b8;">Activity and verification history across channels</p>
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="fetchAuditTrail(true)" title="Refresh Audit Trail" style="font-size:12px; display:inline-flex; align-items:center; gap:4px;">🔄 Refresh</button>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="closeAuditTrailModal()" style="font-size:18px; line-height:1; padding:4px 10px;">✕</button>
+                </div>
+            </div>
+
+            <!-- Filter / Stats Bar -->
+            <div style="padding:12px 24px; background:rgba(15,23,42,0.6); border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; font-size:12px;">
+                <div style="display:flex; gap:16px; color:#94a3b8;">
+                    <span>Total Events: <strong id="auditTotalCount" style="color:#ffffff;">0</strong></span>
+                    <span>Corporate ID: <strong id="auditModalCuid" style="color:#f59e0b; font-family:monospace;">-</strong></span>
+                    <span>Channel: <strong style="color:#38bdf8;">Omnichannel (Web + Mobile)</strong></span>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <input type="text" id="auditSearchInput" placeholder="Filter action, actor or IP..." oninput="filterAuditTrailTable()" style="background:rgba(30,41,59,0.8); border:1px solid rgba(255,255,255,0.1); color:#f8fafc; font-size:12px; padding:4px 10px; border-radius:6px; outline:none; width:220px;">
+                </div>
+            </div>
+
+            <!-- Table Container -->
+            <div style="flex:1; overflow-y:auto; padding:0 24px 16px;">
+                <table style="width:100%; border-collapse:collapse; text-align:left; font-size:12.5px;">
+                    <thead>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.1); color:#94a3b8; position:sticky; top:0; background:#0f172a; z-index:2;">
+                            <th style="padding:12px 8px; font-weight:600;">Timestamp</th>
+                            <th style="padding:12px 8px; font-weight:600;">Channel</th>
+                            <th style="padding:12px 8px; font-weight:600;">Action</th>
+                            <th style="padding:12px 8px; font-weight:600;">Actor</th>
+                            <th style="padding:12px 8px; font-weight:600;">Target / Step</th>
+                            <th style="padding:12px 8px; font-weight:600;">Status</th>
+                            <th style="padding:12px 8px; font-weight:600;">IP &amp; Client</th>
+                        </tr>
+                    </thead>
+                    <tbody id="auditTrailTableBody">
+                        <tr>
+                            <td colspan="7" style="text-align:center; padding:32px; color:#94a3b8;">Loading audit records...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Modal Footer -->
+            <div style="padding:14px 24px; border-top:1px solid rgba(255,255,255,0.08); background:rgba(15,23,42,0.9); display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#64748b;">
+                <span>🔒 Verified compliance and activity log</span>
+                <button type="button" class="btn btn-primary btn-sm" onclick="closeAuditTrailModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Global Role Capabilities Popover Tooltip -->
+    <div id="roleTooltipPopover" class="role-hover-popover" style="display:none;" aria-hidden="true"></div>
+
+    <script src="/js/pdf.min.js?v=20260912_02"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="/js/api.js?v=20260912_02"></script>
+    <script src="/js/app.js?v=20260912_02"></script>
+</body>
+</html>
+
+

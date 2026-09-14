@@ -1,0 +1,14 @@
+# Nixpacks configuration for Railway monorepo deployment
+[phases.install]
+cmds = [
+  "npm install",
+  "npm --prefix web install"
+]
+
+[phases.build]
+cmds = [
+  "npm --prefix web install"
+]
+
+[start]
+cmd = "npm --prefix web start"

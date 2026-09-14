@@ -1,0 +1,30 @@
+{
+  "name": "banking-demo-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "First National Bank — Full Stack Monorepo (Web Microservices Mesh & Mobile Android Application)",
+  "workspaces": [
+    "web"
+  ],
+  "scripts": {
+    "postinstall": "npm --prefix web install",
+    "build": "npm --prefix web install",
+    "start": "npm --prefix web start",
+    "start:web": "npm --prefix web start",
+    "seed:web": "npm --prefix web run seed",
+    "migrate:web": "npm --prefix web run migrate",
+    "migrate:stages": "npm --prefix web run migrate:stages --",
+    "install:web": "npm --prefix web install",
+    "send:yopmail": "npm --prefix web run send:yopmail --"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^8.7.0",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^10.0.1",
+    "pg": "^8.11.5"
+  }
+}
