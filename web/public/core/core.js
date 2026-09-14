@@ -61,7 +61,7 @@
 
     // ── Auth gate ──
     function showLogin() {
-        $('viewLogin').style.display = 'block';
+        $('viewLogin').style.display = ''; // restore rm-login-wrap flex centering
         $('shell').classList.remove('active');
     }
     function showApp() {
