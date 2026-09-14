@@ -4089,7 +4089,100 @@ function displayClientNameOnTop(companyName, crn, companyUid) {
 }
 
 // &#x1F6C7;&#x1F6C7; FINAL APPLICATION SUBMISSION &#x1F6C7;&#x1F6C7;
+// ════════════════════════════════════════════════════════════════
+// STRICT COMPLETENESS VALIDATION — the application cannot be
+// submitted until EVERY required field across all 7 stages is
+// filled and every declaration checkbox is ticked. Partial
+// applications stay saved as In Progress (auto-resume on login).
+// ════════════════════════════════════════════════════════════════
+function validateApplicationComplete(fd) {
+    const errors = [];
+    const req = (cond, step, field, msg) => { if (!cond) errors.push({ step, field, message: msg }); };
+    const filled = (v) => v !== undefined && v !== null && String(v).trim() !== '';
+    const isPlaceholder = (v, p) => !filled(v) || String(v).trim().toUpperCase().startsWith(p);
+
+    // ── Stage 1: KYC documents — the 3 recommended must be uploaded
+    const docs = (fd.documents || fd.step1_documents || []);
+    const recommended = docs.filter(d => d.recommended || d.is_uploaded || d.uploaded);
+    docs.slice(0, 3).forEach((d, i) => {
+        const docName = d.title || d.label || ('Document ' + (i + 1));
+        req(d.is_uploaded || d.uploaded, 1, d.id || ('doc_' + (i + 1)), 'Document "' + docName + '" is not uploaded');
+    });
+
+    // ── Stage 2: Company details
+    const s2 = fd.step2 || {};
+    req(filled(s2.crn), 2, 'crn', 'Company Registration Number (CRN) is required');
+    req(filled(s2.company_name || s2.companyName), 2, 'company_name', 'Registered Company Name is required');
+    req(filled(s2.legal_type || s2.legalType), 2, 'legal_type', 'Legal Type is required');
+    req(filled(s2.issue_date || s2.issueDate), 2, 'issue_date', 'Licence Issue Date is required');
+    req(filled(s2.expiry_date || s2.expiryDate), 2, 'expiry_date', 'Licence Expiry Date is required');
+    req(filled(s2.issued_by || s2.issuedBy), 2, 'issued_by', 'Licence Issuing Authority is required');
+    req(filled(s2.contact_person || s2.contactPerson), 2, 'contact_person', 'Contact Person is required');
+    req(filled(s2.email) && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s2.email), 2, 'email', 'A valid Registered Email is required');
+    req(filled(s2.phone), 2, 'phone', 'Phone Number is required');
+    req(filled(s2.address), 2, 'address', 'Registered Address is required');
+    req(filled(s2.vat_trn || s2.vatTrn), 2, 'vat_trn', 'VAT / TRN is required');
+
+    // ── Stage 3: UBO details — every listed UBO must be complete
+    const ubos = fd.ubos || [];
+    req(ubos.length > 0, 3, 'ubos', 'At least one Ultimate Beneficial Owner must be added');
+    ubos.forEach((u, i) => {
+        const n = i + 1;
+        req(filled(u.fullName || u.name) && !isPlaceholder(u.fullName || u.name, 'UBO '), 3, 'ubo_' + n + '_name', 'UBO ' + n + ': full name is required');
+        req(filled(u.nationality), 3, 'ubo_' + n + '_nationality', 'UBO ' + n + ': nationality is required');
+        req(filled(u.idPassportNumber || u.passportNumber) && !isPlaceholder(u.idPassportNumber || u.passportNumber, 'PASS-'), 3, 'ubo_' + n + '_passport', 'UBO ' + n + ': passport / ID number is required');
+        req(filled(u.dob) && u.dob !== '1985-06-15', 3, 'ubo_' + n + '_dob', 'UBO ' + n + ': date of birth is required');
+        req(Number(u.shareholdingPct || u.percentage) > 0, 3, 'ubo_' + n + '_share', 'UBO ' + n + ': shareholding percentage is required');
+    });
+
+    // ── Stage 4: Ownership structure — rows must total 100%
+    const own = fd.ownership_structure || fd.ownership || [];
+    req(own.length > 0, 4, 'ownership', 'Ownership structure must have at least one shareholder row');
+    const totalPct = own.reduce((t, r) => t + (Number(r.percentage) || 0), 0);
+    req(own.length === 0 || Math.round(totalPct) === 100, 4, 'ownership_total', 'Total shareholding must equal exactly 100% (currently ' + totalPct + '%)');
+
+    // ── Stage 5: Roles — maker and checker assigned and distinct
+    const roles = fd.roles || {};
+    req(filled(roles.maker), 5, 'maker', 'Primary Maker (initiator) must be assigned');
+    req(filled(roles.checker), 5, 'checker', 'Primary Checker (authorizer) must be assigned');
+    req(!filled(roles.maker) || !filled(roles.checker) || roles.maker !== roles.checker, 5, 'roles_distinct', 'Maker and Checker must be different people');
+
+    // ── Stage 6: FATCA / CRS
+    const tax = fd.tax || fd.tax_compliance || {};
+    req(filled(tax.entity_classification || tax.entityClassification || tax.fatca_class), 6, 'fatca_class', 'FATCA entity classification is required');
+    req(tax.crs_confirmed === true || tax.crsConfirmed === true || tax.crs_fi !== undefined, 6, 'crs', 'CRS confirmation is required');
+    req(!(tax.is_us_person || tax.us_person || tax.isUsPerson) || filled(tax.us_tin || tax.usTin), 6, 'us_tin', 'US TIN is required for US persons');
+
+    // ── Stage 7: Declarations — ALL checkboxes ticked
+    const dec = fd.declarations || {};
+    req(dec.d1 === true, 7, 'd1', 'Declaration 1 (accuracy of information) must be ticked');
+    req(dec.d2 === true, 7, 'd2', 'Declaration 2 (terms & conditions) must be ticked');
+    req(dec.d3 === true, 7, 'd3', 'Declaration 3 (data privacy consent) must be ticked');
+
+    return { ok: errors.length === 0, errors };
+}
+window.validateApplicationComplete = validateApplicationComplete;
+
 async function finalizeApp() {
+    // ── STRICT COMPLETENESS GATE ──
+    // The application cannot be submitted unless every required field across
+    // all 7 stages is filled and every declaration checkbox is ticked.
+    // Rejected submissions keep the application saved as In Progress — all
+    // entered data stays intact and resumes on next login.
+    const completeness = validateApplicationComplete(collectFullFormData());
+    if (!completeness.ok) {
+        const byStep = {};
+        completeness.errors.forEach(e => { (byStep[e.step] = byStep[e.step] || []).push(e.message); });
+        const stepNames = { 1: 'Documents', 2: 'Company Details', 3: 'UBO Details', 4: 'Ownership', 5: 'Roles', 6: 'FATCA / CRS', 7: 'Declarations' };
+        const list = Object.keys(byStep).sort().map(st =>
+            `• Stage ${st} — ${stepNames[st]}: ${byStep[st].slice(0, 4).join('; ')}${byStep[st].length > 4 ? ` (+${byStep[st].length - 4} more)` : ''}`
+        ).join('\n');
+        showToast(`Application cannot be submitted yet — ${completeness.errors.length} item(s) incomplete. Your progress is saved.`, 'Incomplete Application', 'error', 8000);
+        alert('Please complete every required field before submitting:\n\n' + list +
+              '\n\nYour progress has been saved — you can log out and continue later.');
+        return;
+    }
+
     if (isReworkMode) {
         showToast('Application resubmitted for relationship manager review!', 'Resubmitted', 'success');
         toggleReworkMode();

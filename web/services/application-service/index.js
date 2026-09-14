@@ -15,6 +15,77 @@ const { logAuditEvent, resolveCompanyUid, getAuditTrail } = require("../../share
 
 const router = express.Router();
 
+// ════════════════════════════════════════════════════════════════
+// STRICT SUBMISSION COMPLETENESS VALIDATION (server-side mirror
+// of the client gate). The application cannot reach 'submitted'
+// unless every stage is complete and all declarations are ticked.
+// ════════════════════════════════════════════════════════════════
+function validateApplicationCompleteness(fd) {
+  const errors = [];
+  const req = (cond, step, field, message) => { if (!cond) errors.push({ step, field, message }); };
+  const filled = (v) => v !== undefined && v !== null && String(v).trim() !== "";
+  const isPlaceholder = (v, p) => !filled(v) || String(v).trim().toUpperCase().startsWith(p);
+
+  // Stage 1: Documents — the 3 recommended KYC documents must be uploaded
+  const docs = fd.documents || fd.step1_documents || [];
+  docs.slice(0, 3).forEach((d, i) => {
+    const docName = d.title || d.label || "Document " + (i + 1);
+    req(d.is_uploaded || d.uploaded, 1, d.id || "doc_" + (i + 1), 'Document "' + docName + '" is not uploaded');
+  });
+
+  // Stage 2: Company details
+  const s2 = fd.step2 || {};
+  req(filled(s2.crn), 2, "crn", "Company Registration Number (CRN) is required");
+  req(filled(s2.company_name || s2.companyName), 2, "company_name", "Registered Company Name is required");
+  req(filled(s2.legal_type || s2.legalType), 2, "legal_type", "Legal Type is required");
+  req(filled(s2.issue_date || s2.issueDate), 2, "issue_date", "Licence Issue Date is required");
+  req(filled(s2.expiry_date || s2.expiryDate), 2, "expiry_date", "Licence Expiry Date is required");
+  req(filled(s2.issued_by || s2.issuedBy), 2, "issued_by", "Licence Issuing Authority is required");
+  req(filled(s2.contact_person || s2.contactPerson), 2, "contact_person", "Contact Person is required");
+  req(filled(s2.email) && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s2.email), 2, "email", "A valid Registered Email is required");
+  req(filled(s2.phone), 2, "phone", "Phone Number is required");
+  req(filled(s2.address), 2, "address", "Registered Address is required");
+  req(filled(s2.vat_trn || s2.vatTrn), 2, "vat_trn", "VAT / TRN is required");
+
+  // Stage 3: UBO details
+  const ubos = fd.ubos || [];
+  req(ubos.length > 0, 3, "ubos", "At least one Ultimate Beneficial Owner must be added");
+  ubos.forEach((u, i) => {
+    const n = i + 1;
+    req(filled(u.fullName || u.name) && !isPlaceholder(u.fullName || u.name, "UBO "), 3, "ubo_" + n + "_name", "UBO " + n + ": full name is required");
+    req(filled(u.nationality), 3, "ubo_" + n + "_nationality", "UBO " + n + ": nationality is required");
+    req(filled(u.idPassportNumber || u.passportNumber) && !isPlaceholder(u.idPassportNumber || u.passportNumber, "PASS-"), 3, "ubo_" + n + "_passport", "UBO " + n + ": passport / ID number is required");
+    req(filled(u.dob) && u.dob !== "1985-06-15", 3, "ubo_" + n + "_dob", "UBO " + n + ": date of birth is required");
+    req(Number(u.shareholdingPct || u.percentage) > 0, 3, "ubo_" + n + "_share", "UBO " + n + ": shareholding percentage is required");
+  });
+
+  // Stage 4: Ownership — rows must total 100%
+  const own = fd.ownership_structure || fd.ownership || [];
+  req(own.length > 0, 4, "ownership", "Ownership structure must have at least one shareholder row");
+  const totalPct = own.reduce((t, r) => t + (Number(r.percentage) || 0), 0);
+  req(own.length === 0 || Math.round(totalPct) === 100, 4, "ownership_total", "Total shareholding must equal exactly 100% (currently " + totalPct + "%)");
+
+  // Stage 5: Roles
+  const roles = fd.roles || {};
+  req(filled(roles.maker), 5, "maker", "Primary Maker (initiator) must be assigned");
+  req(filled(roles.checker), 5, "checker", "Primary Checker (authorizer) must be assigned");
+  req(!filled(roles.maker) || !filled(roles.checker) || roles.maker !== roles.checker, 5, "roles_distinct", "Maker and Checker must be different people");
+
+  // Stage 6: FATCA / CRS
+  const tax = fd.tax || fd.tax_compliance || {};
+  req(filled(tax.entity_classification || tax.entityClassification || tax.fatca_class), 6, "fatca_class", "FATCA entity classification is required");
+  req(tax.crs_confirmed === true || tax.crsConfirmed === true || tax.crs_fi !== undefined, 6, "crs", "CRS confirmation is required");
+  req(!(tax.is_us_person || tax.us_person || tax.isUsPerson) || filled(tax.us_tin || tax.usTin), 6, "us_tin", "US TIN is required for US persons");
+
+  // Stage 7: Declarations — all ticked
+  const dec = fd.declarations || {};
+  req(dec.d1 === true, 7, "d1", "Declaration 1 (accuracy of information) must be ticked");
+  req(dec.d2 === true, 7, "d2", "Declaration 2 (terms & conditions) must be ticked");
+  req(dec.d3 === true, 7, "d3", "Declaration 3 (data privacy consent) must be ticked");
+
+  return { ok: errors.length === 0, errors };
+}
+
 // 1. Get Current User Application
 router.get("/current", requireAuth, async (req, res) => {
   memStore.metrics.serviceRequests.applications++;
@@ -136,6 +207,22 @@ router.post("/save", requireAuth, async (req, res) => {
     };
     if (mergedFormData.step2) {
       mergedFormData.step2.company_uid = resolvedCompanyUid;
+    }
+
+    // ── SERVER-SIDE SUBMISSION GATE ──
+    // A submission (status=submitted) is only accepted when every required
+    // field across all 7 stages is present and every declaration checkbox is
+    // ticked. Incomplete applications are rejected with the missing list and
+    // their status remains in-progress — saved data is never discarded.
+    if (resolvedStatus === "submitted") {
+      const completeness = validateApplicationCompleteness(mergedFormData);
+      if (!completeness.ok) {
+        return res.status(400).json({
+          error: "Application incomplete — every required field in all 7 stages must be filled and all declarations ticked before submission.",
+          code: "APPLICATION_INCOMPLETE",
+          missing: completeness.errors
+        });
+      }
     }
 
     let updatedRecord = null;
