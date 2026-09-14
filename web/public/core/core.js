@@ -66,6 +66,7 @@
     }
     function showApp() {
         $('viewLogin').style.display = 'none';
+        $('shell').style.display = '';
         $('shell').classList.add('active');
         profile = loadProfile();
         $('whoName').textContent = profile.name || 'RM Executive';
@@ -92,7 +93,7 @@
             showApp();
         } catch (err) {
             errBox.textContent = err.message; errBox.style.display = 'block';
-        } finally { btn.disabled = false; btn.textContent = 'Sign In'; }
+        } finally { btn.disabled = false; btn.innerHTML = '<span class="btn-label">Sign In &rarr;</span>'; }
     }
 
     // ── Navigation ──
@@ -172,7 +173,7 @@
                 <td>${esc(summarize(r.payload, r.request_type))}</td>
                 <td>${esc(r.maker_name || r.maker_id)}</td>
                 <td>${esc(when(r.created_at))}</td>
-                ${withActions ? '<td class="row-actions"><button class="btn green small" data-approve="' + esc(r.request_ref) + '">✔ Approve</button><button class="btn red small" data-reject="' + esc(r.request_ref) + '">✖ Reject</button></td>' : '<td></td>'}
+                ${withActions ? '<td class="row-actions"><button class="btn-green" data-approve="' + esc(r.request_ref) + '">✔ Approve</button><button class="btn-red" data-reject="' + esc(r.request_ref) + '">✖ Reject</button></td>' : '<td></td>'}
             </tr>
         `).join('');
         if (withActions) {
@@ -323,7 +324,7 @@
             await refreshAll();
         } catch (err) {
             formMsg('cifOk', 'cifError', err.message, true);
-        } finally { btn.disabled = false; btn.textContent = '➕ Submit CIF Request (to Checker)'; }
+        } finally { btn.disabled = false; btn.innerHTML = '<span class="btn-label">➕ Submit CIF Request (to Checker)</span>'; }
     }
 
     async function submitAccount() {
@@ -349,7 +350,7 @@
             await refreshAll();
         } catch (err) {
             formMsg('accOk', 'accError', err.message, true);
-        } finally { btn.disabled = false; btn.textContent = '💳 Submit Account Request (to Checker)'; }
+        } finally { btn.disabled = false; btn.innerHTML = '<span class="btn-label">💳 Submit Account Request (to Checker)</span>'; }
     }
 
     async function submitTx() {
@@ -375,7 +376,7 @@
             await refreshAll();
         } catch (err) {
             formMsg('txOk', 'txError', err.message, true);
-        } finally { btn.disabled = false; btn.textContent = '💸 Submit Transaction Request (to Checker)'; }
+        } finally { btn.disabled = false; btn.innerHTML = '<span class="btn-label">💸 Submit Transaction Request (to Checker)</span>'; }
     }
 
     // ── Wire-up ──
