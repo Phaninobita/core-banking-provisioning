@@ -58,7 +58,7 @@
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
                         <div>
                             <div style="font-size:10px;color:#94a3b8;font-weight:700;">CORPORATE CLIENT</div>
-                            <div style="font-weight:800;font-size:14px;color:#f8fafc;" id="mClientName">Alexander J. Vance</div>
+                            <div style="font-weight:800;font-size:14px;color:#f8fafc;" id="mClientName">Corporate Client</div>
                         </div>
                         <div style="display:flex;align-items:center;gap:6px;">
                             <span style="background:rgba(16,185,129,0.2);color:#34d399;font-size:9px;padding:2px 6px;border-radius:10px;font-weight:800;">VIP GOLD</span>
@@ -72,8 +72,8 @@
                         <div class="mobile-balance-card">
                             <div class="mbc-shimmer"></div>
                             <div style="font-size:10px;color:rgba(255,255,255,0.8);font-weight:700;text-transform:uppercase;">Primary Treasury Account</div>
-                            <div id="mPrimaryBalance" style="font-size:24px;font-weight:800;margin:6px 0;letter-spacing:-0.5px;">AED 3,420,850.00</div>
-                            <div id="mPrimaryIban" style="font-size:10px;color:rgba(255,255,255,0.85);font-family:monospace;">AE29033000007029841001</div>
+                            <div id="mPrimaryBalance" style="font-size:24px;font-weight:800;margin:6px 0;letter-spacing:-0.5px;">—</div>
+                            <div id="mPrimaryIban" style="font-size:10px;color:rgba(255,255,255,0.85);font-family:monospace;">—</div>
                         </div>
 
                         <!-- Virtual Cards Carousel -->

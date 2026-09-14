@@ -453,14 +453,38 @@ router.post("/mobile/biometric", async (req, res) => {
     return res.status(400).json({ error: "Cryptographic biometric signature required from hardware keystore." });
   }
 
-  const activeCrn = crn ? crn.trim() : "509077205";
-  const activeEmail = "admin@corporate.com";
-  const appRef = "AB-2026-DEMO01";
+  if (!crn || !String(crn).trim()) {
+    return res.status(400).json({ error: "CRN is required for biometric authentication." });
+  }
+
+  // Resolve the real corporate application for this CRN — no demo identities
+  const activeCrn = crn.trim();
+  let applicationRecord = null;
+  if (db.isConnected()) {
+    try {
+      const dbRes = await db.query(
+        "SELECT * FROM corporate_onboarding_applications WHERE UPPER(TRIM(crn)) = $1 ORDER BY id DESC LIMIT 1",
+        [activeCrn.toUpperCase()]
+      );
+      if (dbRes.rows && dbRes.rows.length > 0) applicationRecord = dbRes.rows[0];
+    } catch (e) {
+      console.warn("[AUTH SERVICE] biometric application lookup notice:", e.message);
+    }
+  }
+  if (!applicationRecord) {
+    return res.status(401).json({ error: `No onboarding application found for CRN ${activeCrn}.` });
+  }
+
+  const activeEmail = applicationRecord.registered_email;
+  const appRef = applicationRecord.application_ref;
+  const companyUid = applicationRecord.company_uid;
 
   const token = jwt.sign(
     {
       crn: activeCrn,
       email: activeEmail,
+      company_uid: companyUid,
+      company_name: applicationRecord.company_name,
       application_ref: appRef,
       channel: "mobile_biometric"
     },
@@ -472,15 +496,16 @@ router.post("/mobile/biometric", async (req, res) => {
     success: true,
     authenticated: true,
     channel: "mobile_biometric",
-    deviceId: deviceId || "iPhone-16-Pro-Simulator",
+    deviceId: deviceId || "mobile-device",
     token,
     user: {
-      name: "Alexander J. Vance",
-      company: "Gringotts Commercial Client",
+      name: applicationRecord.contact_person || applicationRecord.company_name || "Corporate Client",
+      company: applicationRecord.company_name || "Corporate Client",
       crn: activeCrn,
       email: activeEmail,
+      company_uid: companyUid,
       application_ref: appRef,
-      tier: "Gringotts Vault Corporate Gold"
+      tier: "Corporate Client"
     },
     service: "auth-service"
   });

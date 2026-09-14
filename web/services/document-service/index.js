@@ -503,21 +503,8 @@ router.post("/ocr", requireAuth, async (req, res) => {
     const parsedData = parseDocumentText(extractedText);
 
     // Only provide fallback demo data if ABSOLUTELY no text was extracted and no real data found
-    if (!extractedText && !parsedData.fullName && !parsedData.passportNumber) {
-      if (docType === "corporate") {
-        parsedData.fullName = "First National Holdings Inc";
-        parsedData.registrationNumber = "CRN-8849201";
-        parsedData.issuingAuthority = "Delaware Division of Corporations";
-        parsedData.expiry = "2028-11-30";
-      } else {
-        parsedData.fullName = "Alexander James Vance";
-        parsedData.passportNumber = "P98421054";
-        parsedData.nationality = "British";
-        parsedData.dob = "1984-06-15";
-        parsedData.expiry = "2031-06-14";
-        parsedData.gender = "Male";
-      }
-    }
+    // No fabricated OCR fallback: if nothing could be extracted, parsedData
+    // stays empty and the response reports the extraction honestly.
 
     return res.json({
       success: true,

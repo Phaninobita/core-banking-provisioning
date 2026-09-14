@@ -42,6 +42,8 @@ function getLiveFxRates() {
 }
 
 // 1. Get Live Corporate Accounts (Requires Authentication)
+// Returns ONLY real core-banking accounts provisioned for the caller's
+// company (or all accounts for RM executives). No generated/demo accounts.
 router.get("/accounts", requireAuth, async (req, res) => {
   memStore.metrics.serviceRequests.banking++;
 
@@ -55,35 +57,10 @@ router.get("/accounts", requireAuth, async (req, res) => {
       accounts = result.rows;
     }
 
-    if (!accounts || accounts.length === 0) {
-      accounts = Array.from(memStore.accounts.values());
-    }
-
-    // Filter accounts by caller's company if user is not RM executive
+    // Tenant isolation: customers only ever see their own provisioned accounts
     if (!req.user.is_rm && req.user.role !== "RM" && req.user.company_uid) {
       const callerCuid = req.user.company_uid.toUpperCase();
-      let matching = accounts.filter(a => a.company_uid && a.company_uid.toUpperCase() === callerCuid);
-      if (matching.length === 0) {
-        const compName = req.user.company_name || "Corporate Treasury";
-        const hash = crypto.createHash("md5").update(callerCuid).digest("hex").substring(0, 8);
-        const generatedAccNum = "70" + parseInt(hash, 16).toString().substring(0, 8);
-        const autoAcc = {
-          id: Date.now(),
-          company_uid: callerCuid,
-          account_number: generatedAccNum,
-          iban: `AE29033000${generatedAccNum}`,
-          currency: "AED",
-          account_name: `${compName} Operational Treasury`,
-          account_type: "Corporate Checking",
-          balance: 1000000.00,
-          available_balance: 1000000.00,
-          status: "active",
-          created_at: new Date().toISOString()
-        };
-        memStore.accounts.set(generatedAccNum, autoAcc);
-        matching = [autoAcc];
-      }
-      accounts = matching;
+      accounts = accounts.filter(a => a.company_uid && a.company_uid.toUpperCase() === callerCuid);
     }
 
     // Calculate total liquidity in AED
@@ -148,23 +125,7 @@ router.get("/transactions", requireAuth, async (req, res) => {
     }
   }
 
-  if (!txs || txs.length === 0) {
-    if (isRm || !userCuid) {
-      txs = memStore.transactions.slice(0, limit);
-    } else {
-      // Find accounts belonging to caller's company in memory
-      const callerAccounts = new Set();
-      for (const acc of memStore.accounts.values()) {
-        if (!acc.company_uid || acc.company_uid.toUpperCase() === userCuid) {
-          callerAccounts.add(acc.account_number);
-        }
-      }
-      txs = memStore.transactions.filter(t =>
-        (t.company_uid && t.company_uid.toUpperCase() === userCuid) ||
-        (t.account_number && callerAccounts.has(t.account_number))
-      ).slice(0, limit);
-    }
-  }
+  // Ledger only — no in-memory demo fallback. Real transactions live in Supabase.
 
   return res.json({
     success: true,
@@ -208,21 +169,18 @@ router.post("/transfer", requireAuth, async (req, res) => {
 
   let accountNum = fromAccount;
   if (!accountNum && req.user.company_uid) {
-    const callerCuid = req.user.company_uid.toUpperCase();
-    for (const a of memStore.accounts.values()) {
-      if (a.company_uid && a.company_uid.toUpperCase() === callerCuid) {
-        accountNum = a.account_number;
-        break;
-      }
-    }
-  }
-  if (!accountNum) {
-    accountNum = "7029841001";
+    // Default to the caller's first real core account
+    const callerAccounts = await db.query(
+      "SELECT * FROM corporate_accounts ORDER BY id ASC"
+    );
+    const mine = (callerAccounts.rows || []).filter(a =>
+      a.company_uid && a.company_uid.toUpperCase() === req.user.company_uid.toUpperCase());
+    if (mine.length > 0) accountNum = mine[0].account_number;
   }
 
   let acc = null;
 
-  if (db.isConnected()) {
+  if (accountNum && db.isConnected()) {
     try {
       const accRes = await db.query(
         "SELECT * FROM corporate_accounts WHERE account_number = $1 LIMIT 1",
@@ -237,34 +195,7 @@ router.post("/transfer", requireAuth, async (req, res) => {
   }
 
   if (!acc) {
-    acc = memStore.accounts.get(accountNum);
-  }
-
-  // If no account exists yet for this corporate entity, provision their operational treasury account
-  if (!acc && req.user.company_uid) {
-    const callerCuid = req.user.company_uid.toUpperCase();
-    const compName = req.user.company_name || "Corporate Treasury";
-    const hash = crypto.createHash("md5").update(callerCuid).digest("hex").substring(0, 8);
-    const generatedAccNum = (accountNum && accountNum !== "7029841001") ? accountNum : ("70" + parseInt(hash, 16).toString().substring(0, 8));
-    acc = {
-      id: Date.now(),
-      company_uid: callerCuid,
-      account_number: generatedAccNum,
-      iban: `AE29033000${generatedAccNum}`,
-      currency: currency || "AED",
-      account_name: `${compName} Operational Treasury`,
-      account_type: "Corporate Checking",
-      balance: 1000000.00,
-      available_balance: 1000000.00,
-      status: "active",
-      created_at: new Date().toISOString()
-    };
-    accountNum = generatedAccNum;
-    memStore.accounts.set(generatedAccNum, acc);
-  }
-
-  if (!acc) {
-    return res.status(404).json({ error: "Source corporate account not found." });
+    return res.status(404).json({ error: "Source corporate account not found. Your core account must be provisioned and approved before transacting." });
   }
 
   // Authorization Check: Caller must own the corporate account or have RM Executive privileges
@@ -406,71 +337,54 @@ router.post("/transfer", requireAuth, async (req, res) => {
   });
 });
 
-// 5. Mobile App Summary Feed (Tailored for the upcoming Mobile Bank App) (Requires Authentication & Tenant Isolation)
-router.get(["/mobile/summary", "/summary"], requireAuth, (req, res) => {
+// 5. Mobile App Summary Feed (Requires Authentication & Tenant Isolation)
+// Serves only real provisioned accounts and the authenticated client's data.
+router.get(["/mobile/summary", "/summary"], requireAuth, async (req, res) => {
   memStore.metrics.serviceRequests.banking++;
   const userCuid = (req.user.company_uid || "").trim().toUpperCase();
   const isRm = Boolean(req.user.is_rm || req.user.role === "RM");
 
-  let accounts = Array.from(memStore.accounts.values());
+  let accounts = [];
+  if (db.isConnected()) {
+    try {
+      const result = await db.query("SELECT * FROM corporate_accounts ORDER BY id ASC");
+      accounts = result.rows || [];
+    } catch (e) { /* no accounts yet */ }
+  }
   if (!isRm && userCuid) {
-    const matching = accounts.filter(a => !a.company_uid || a.company_uid.toUpperCase() === userCuid);
-    if (matching.length > 0) accounts = matching;
+    accounts = accounts.filter(a => a.company_uid && a.company_uid.toUpperCase() === userCuid);
   }
   const primaryAccount = accounts[0] || {};
 
-  let recentTransactions = memStore.transactions;
-  if (!isRm && userCuid) {
-    const userAccountNumbers = new Set(accounts.map(a => a.account_number));
-    recentTransactions = recentTransactions.filter(t =>
-      (t.company_uid && t.company_uid.toUpperCase() === userCuid) ||
-      (t.account_number && userAccountNumbers.has(t.account_number))
-    );
+  let recentTransactions = [];
+  if (db.isConnected()) {
+    try {
+      const result = await db.query(
+        isRm || !userCuid
+          ? "SELECT * FROM account_transactions ORDER BY created_at DESC LIMIT 5"
+          : "SELECT * FROM account_transactions WHERE company_uid = $1 ORDER BY created_at DESC LIMIT 5",
+        isRm || !userCuid ? [] : [userCuid]
+      );
+      recentTransactions = result.rows || [];
+    } catch (e) { /* empty ledger */ }
   }
-  recentTransactions = recentTransactions.slice(0, 5);
-
-  const virtualCards = [
-    {
-      cardId: "card_corp_01",
-      cardNumber: "•••• •••• •••• 8842",
-      cardholder: "ALEXANDER J VANCE",
-      expiry: "09/29",
-      type: "Mastercard World Elite Corporate",
-      gradient: "linear-gradient(135deg, #1e1b4b 0%, #4338ca 50%, #06b6d4 100%)",
-      currency: "AED",
-      limit: 100000.00,
-      spentThisMonth: 18450.00
-    },
-    {
-      cardId: "card_corp_02",
-      cardNumber: "•••• •••• •••• 3129",
-      cardholder: "FIRST NATIONAL HOLDINGS",
-      expiry: "11/30",
-      type: "Visa Infinite Commercial",
-      gradient: "linear-gradient(135deg, #064e3b 0%, #059669 50%, #10b981 100%)",
-      currency: "USD",
-      limit: 50000.00,
-      spentThisMonth: 4210.00
-    }
-  ];
 
   return res.json({
     success: true,
     mobileAppVersion: "2.4.0 (Mobile Banking Suite)",
     client: {
-      name: "Alexander J. Vance",
-      company: "First National Holdings Inc",
-      accountTier: "Corporate VIP"
+      name: req.user.name || req.user.email || "Corporate Client",
+      company: req.user.company_name || primaryAccount.account_name || null,
+      accountTier: isRm ? "RM Executive" : "Corporate"
     },
     primaryBalance: {
       currency: primaryAccount.currency || "AED",
       balance: primaryAccount.balance || 0,
       available: primaryAccount.available_balance || 0,
-      accountNumber: primaryAccount.account_number || "7029841001",
-      iban: primaryAccount.iban || "AE29033000007029841001"
+      accountNumber: primaryAccount.account_number || null,
+      iban: primaryAccount.iban || null
     },
     allAccounts: accounts,
-    virtualCards,
     recentTransactions,
     quickActions: [
       { id: "transfer", label: "Send Money", icon: "arrow-up-right", enabled: true },

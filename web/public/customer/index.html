@@ -7637,10 +7637,10 @@ body[data-theme="rose"],
         <div class="scc-identity">
           <span class="scc-icon" aria-hidden="true">&#x1F464;</span>
           <div class="scc-details">
-            <span class="scc-company-name">Harry Potter</span>
+            <span class="scc-company-name" id="cpSideName">Corporate Client</span>
             <div class="scc-meta-row">
-              <span class="scc-crn">Vault #687</span>
-              <span class="scc-cuid">Gold Member</span>
+              <span class="scc-crn" id="cpSideCrn">—</span>
+              <span class="scc-cuid" id="cpSideTier">—</span>
             </div>
           </div>
         </div>
@@ -7648,7 +7648,7 @@ body[data-theme="rose"],
           <div class="scc-prog-header">
             <span class="scc-prog-label">Total Relationship Balance</span>
           </div>
-          <div style="font-size:16px; font-weight:800; color:#fff;">168,750.75 Galleons</div>
+          <div style="font-size:16px; font-weight:800; color:#fff;" id="cpTotalBalance">—</div>
         </div>
       </div>
 
@@ -7708,22 +7708,8 @@ body[data-theme="rose"],
 
         <!-- ================= DASHBOARD ================= -->
         <section class="cp-view active" id="cp-dashboard">
-          <div class="cp-grid-3">
-            <div class="cp-bal-card"><span class="tag" style="position:absolute;top:16px;right:16px;font-size:10px;padding:3px 9px;border-radius:20px;background:rgba(16,185,129,.15);color:#10b981;font-weight:700;">Active</span>
-              <div class="lbl">Vault Current Account</div>
-              <div class="amt">120,540.75 <span style="font-size:12px;color:rgba(255,255,255,.4);">Galleons</span></div>
-              <div class="acc">&bull;&bull;&bull;&bull; 6871</div>
-            </div>
-            <div class="cp-bal-card"><span class="tag" style="position:absolute;top:16px;right:16px;font-size:10px;padding:3px 9px;border-radius:20px;background:rgba(16,185,129,.15);color:#10b981;font-weight:700;">Active</span>
-              <div class="lbl">High-Yield Savings</div>
-              <div class="amt">48,210.00 <span style="font-size:12px;color:rgba(255,255,255,.4);">Galleons</span></div>
-              <div class="acc">&bull;&bull;&bull;&bull; 2214</div>
-            </div>
-            <div class="cp-bal-card"><span class="tag" style="position:absolute;top:16px;right:16px;font-size:10px;padding:3px 9px;border-radius:20px;background:rgba(16,185,129,.15);color:#10b981;font-weight:700;">Active</span>
-              <div class="lbl">Foreign Currency (GBP)</div>
-              <div class="amt">&pound; 3,120.40</div>
-              <div class="acc">&bull;&bull;&bull;&bull; 9903</div>
-            </div>
+          <div class="cp-grid-3" id="cpAccountsGrid">
+            <div class="cp-card" style="grid-column:1/-1;text-align:center;color:rgba(255,255,255,.55);font-size:13.5px;">Loading your core accounts…</div>
           </div>
 
           <div class="cp-section-head"><h2>Quick actions</h2></div>
@@ -7754,29 +7740,18 @@ body[data-theme="rose"],
 
               <div class="field-group">
                 <label for="cpFromAcc">From account</label>
-                <select id="cpFromAcc">
-                  <option>Vault Current Account &bull;&bull;&bull;&bull;6871 &mdash; 120,540.75 Galleons</option>
-                  <option>High-Yield Savings &bull;&bull;&bull;&bull;2214 &mdash; 48,210.00 Galleons</option>
-                </select>
+                <select id="cpFromAcc"><option value="">Loading your accounts…</option></select>
               </div>
 
               <div class="field-group" id="cpOwnAccField">
                 <label for="cpToOwnAcc">To account</label>
-                <select id="cpToOwnAcc">
-                  <option>High-Yield Savings &bull;&bull;&bull;&bull;2214</option>
-                  <option>Foreign Currency (GBP) &bull;&bull;&bull;&bull;9903</option>
-                </select>
+                <select id="cpToOwnAcc"><option value="">Loading your accounts…</option></select>
               </div>
 
               <div class="field-group" id="cpBeneField" style="display:none;">
-                <label for="cpToBene">Beneficiary</label>
-                <select id="cpToBene">
-                  <option>Ron Weasley &mdash; Gringotts &bull;&bull;&bull;&bull;4410</option>
-                  <option>Hermione Granger &mdash; Gringotts &bull;&bull;&bull;&bull;7723</option>
-                  <option>Diagon Alley Apothecary Ltd &mdash; Barclays UK &bull;&bull;&bull;&bull;1188</option>
-                  <option>Fleur Delacour &mdash; Banque de Magie, Paris</option>
-                </select>
-                <div class="field-hint">Don't see who you're looking for? <span class="cp-link" onclick="cpOpenBenModal()">Add a new beneficiary</span></div>
+                <label for="cpToBene">Beneficiary IBAN / Account</label>
+                <input id="cpToBene" placeholder="e.g. AE070331234567890123456">
+                <div class="field-hint">Enter the beneficiary's IBAN or core account number for the external transfer.</div>
               </div>
 
               <div class="field-group">
@@ -7785,7 +7760,7 @@ body[data-theme="rose"],
                   <span class="curr">G</span>
                   <input type="number" id="cpAmount" placeholder="0.00" style="width:100%;">
                 </div>
-                <div class="field-hint">Available balance: 120,540.75 Galleons</div>
+                <div class="field-hint" id="cpAvailHint">Available balance: —</div>
               </div>
 
               <div class="field-row2">
@@ -7998,22 +7973,95 @@ function cpShowView(name){
   document.getElementById('cpTopbarTitle').innerHTML = titles[name][1];
 }
 
-/* ---- Recent transactions ---- */
-const cpRecentTx=[
-  {name:'Transfer to Ron Weasley', meta:'Fund Transfer &bull; Today, 9:14 AM', amt:'-450.00 G', cls:'neg', ic:'&#x1F4B8;'},
-  {name:'Salary Credit &mdash; Ministry of Magic', meta:'Credit &bull; Yesterday', amt:'+3,200.00 G', cls:'pos', ic:'&#x1F3DB;&#xFE0F;'},
-  {name:'Ollivanders Wand Shop', meta:'Card Purchase &bull; Sep 11', amt:'-77.50 G', cls:'neg', ic:'&#x1F6CD;&#xFE0F;'},
-  {name:'Transfer to Hermione Granger', meta:'Fund Transfer &bull; Sep 9', amt:'-1,200.00 G', cls:'neg', ic:'&#x1F4B8;'},
-];
-const cpRc=document.getElementById('cpRecentTx');
-cpRecentTx.forEach(tx=>{
-  cpRc.insertAdjacentHTML('beforeend', `
+/* ---- Live banking data (real core accounts & ledger, no demo data) ---- */
+function cpToken(){
+  return localStorage.getItem('apex_session_token') || sessionStorage.getItem('apex_session_token') || '';
+}
+async function cpApi(path, opts = {}){
+  const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+  const t = cpToken();
+  if (t) headers['Authorization'] = 'Bearer ' + t;
+  const res = await fetch(path, { ...opts, headers });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || ('Request failed (' + res.status + ')'));
+  return data;
+}
+let cpAccounts = [];
+
+function cpRenderAccounts(){
+  const grid = document.getElementById('cpAccountsGrid');
+  const total = cpAccounts.reduce((s, a) => s + Number(a.balance || 0), 0);
+  document.getElementById('cpTotalBalance').textContent = cpAccounts.length
+    ? total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + (cpAccounts[0].currency || 'AED')
+    : '—';
+  if (!cpAccounts.length){
+    grid.innerHTML = '<div class="cp-card" style="grid-column:1/-1;text-align:center;color:rgba(255,255,255,.55);font-size:13.5px;">No core accounts yet. Once your onboarding application is approved and provisioned, your accounts and balances will appear here.</div>';
+    return;
+  }
+  grid.innerHTML = cpAccounts.map(a => `
+    <div class="cp-bal-card"><span class="tag" style="position:absolute;top:16px;right:16px;font-size:10px;padding:3px 9px;border-radius:20px;background:rgba(16,185,129,.15);color:#10b981;font-weight:700;">${(a.status || 'active').toUpperCase()}</span>
+      <div class="lbl">${a.account_name || a.account_type || 'Corporate Account'}</div>
+      <div class="amt">${Number(a.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} <span style="font-size:12px;color:rgba(255,255,255,.4);">${a.currency || 'AED'}</span></div>
+      <div class="acc">&bull;&bull;&bull;&bull; ${String(a.account_number || '').slice(-4)}</div>
+    </div>`).join('');
+
+  const opts = cpAccounts.filter(a => a.status === 'active')
+    .map(a => `<option value="${a.account_number}">${a.account_name || a.account_type || 'Account'} &bull;&bull;&bull;&bull;${String(a.account_number).slice(-4)} — ${Number(a.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })} ${a.currency}</option>`).join('');
+  document.getElementById('cpFromAcc').innerHTML = opts || '<option value="">No active accounts</option>';
+  document.getElementById('cpToOwnAcc').innerHTML = opts || '<option value="">No active accounts</option>';
+  cpUpdateAvailHint();
+}
+function cpUpdateAvailHint(){
+  const from = document.getElementById('cpFromAcc').value;
+  const acc = cpAccounts.find(a => String(a.account_number) === String(from));
+  document.getElementById('cpAvailHint').textContent = acc
+    ? `Available balance: ${Number(acc.available_balance != null ? acc.available_balance : acc.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })} ${acc.currency}`
+    : 'Available balance: —';
+}
+document.getElementById('cpFromAcc').addEventListener('change', cpUpdateAvailHint);
+
+function cpRenderRealTransactions(txs){
+  const cpRc = document.getElementById('cpRecentTx');
+  if (!txs || !txs.length){
+    cpRc.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:18px 0;">No transactions yet. Your executed transfers will appear here.</div>';
+    return;
+  }
+  cpRc.innerHTML = txs.slice(0, 6).map(tx => `
     <div class="cp-tx-row">
-      <div class="cp-tx-ic">${tx.ic}</div>
-      <div class="cp-tx-main"><div class="cp-tx-name">${tx.name}</div><div class="cp-tx-meta">${tx.meta}</div></div>
-      <div class="cp-tx-amt ${tx.cls}">${tx.amt}</div>
-    </div>`);
-});
+      <div class="cp-tx-ic">${tx.type === 'credit' ? '&#x2B07;' : '&#x1F4B8;'}</div>
+      <div class="cp-tx-main"><div class="cp-tx-name">${tx.description || tx.counterparty_name || tx.transaction_ref}</div>
+      <div class="cp-tx-meta">${(tx.type || 'transfer').toUpperCase()} &bull; ${tx.transaction_ref || ''} &bull; ${tx.created_at ? new Date(tx.created_at).toLocaleString() : ''}</div></div>
+      <div class="cp-tx-amt ${tx.type === 'credit' ? 'pos' : 'neg'}">${tx.type === 'credit' ? '+' : '-'}${Number(tx.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })} ${tx.currency || ''}</div>
+    </div>`).join('');
+}
+
+async function cpLoadBankingData(){
+  if (!cpToken()){
+    document.getElementById('cpRecentTx').innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:18px 0;">Please sign in from the customer portal to view your live accounts.</div>';
+    return;
+  }
+  // Real client identity from the session JWT
+  try {
+    const payload = JSON.parse(atob(cpToken().split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    document.getElementById('cpSideName').textContent = payload.company_name || payload.name || payload.email || 'Corporate Client';
+    document.getElementById('cpSideCrn').textContent = payload.crn ? ('CRN ' + payload.crn) : '—';
+    document.getElementById('cpSideTier').textContent = payload.is_rm ? 'RM Executive' : 'Corporate Client';
+  } catch (e) { /* keep placeholders */ }
+  try {
+    const accRes = await cpApi('/api/v1/banking/accounts');
+    cpAccounts = (accRes.success && accRes.accounts) || [];
+    cpRenderAccounts();
+  } catch (e) {
+    document.getElementById('cpAccountsGrid').innerHTML = '<div class="cp-card" style="grid-column:1/-1;text-align:center;color:rgba(255,255,255,.55);font-size:13px;">Sign in to view your live core accounts.</div>';
+  }
+  try {
+    const txRes = await cpApi('/api/v1/banking/transactions?limit=6');
+    cpRenderRealTransactions((txRes.success && txRes.transactions) || []);
+  } catch (e) {
+    cpRenderRealTransactions([]);
+  }
+}
+cpLoadBankingData();
 
 /* ---- Transfer type segmented control ---- */
 document.querySelectorAll('#cpTransferSeg .cp-seg-opt').forEach(opt=>{
@@ -8052,20 +8100,38 @@ function cpOpenReview(){
   cpOpenModal('cpReviewModal');
 }
 function cpOpenOtp(){ cpCloseModal('cpReviewModal'); cpOpenModal('cpOtpModal'); }
-function cpCompleteTransfer(){
-  cpCloseModal('cpOtpModal');
-  showToast('Your transfer has been authorized and processed.','Transfer Successful','success');
-  document.getElementById('cpAmount').value='';
-  document.getElementById('cpRemarks').value='';
+async function cpCompleteTransfer(){
+  const from = document.getElementById('cpFromAcc').value;
+  const amount = parseFloat(document.getElementById('cpAmount').value);
+  const isOwn = document.getElementById('cpOwnAccField').style.display !== 'none';
+  const to = isOwn ? document.getElementById('cpToOwnAcc').value : document.getElementById('cpToBene').value.trim();
+  try {
+    const res = await cpApi('/api/v1/banking/transfer', {
+      method: 'POST',
+      body: JSON.stringify({
+        fromAccount: from,
+        toAccount: isOwn ? to : undefined,
+        counterpartyIban: isOwn ? undefined : to,
+        counterpartyName: isOwn ? undefined : ('External beneficiary ' + to),
+        amount,
+        description: document.getElementById('cpRemarks').value.trim() || ('Transfer — ' + document.getElementById('cpPurpose').value)
+      })
+    });
+    cpCloseModal('cpOtpModal');
+    showToast('Transfer ' + (res.transaction && res.transaction.transaction_ref ? res.transaction.transaction_ref : '') + ' executed via the core banking ledger.', 'Transfer Successful', 'success');
+    document.getElementById('cpAmount').value='';
+    document.getElementById('cpRemarks').value='';
+    cpLoadBankingData();
+  } catch (err) {
+    cpCloseModal('cpOtpModal');
+    showToast(err.message, 'Transfer Failed', 'error');
+  }
 }
 
-/* ---- Beneficiaries ---- */
-let cpBeneficiaries=[
-  {name:'Ron Weasley', acc:'Gringotts &bull;&bull;&bull;&bull;4410', bank:'Gringotts Bank', status:'verified', initials:'RW'},
-  {name:'Hermione Granger', acc:'Gringotts &bull;&bull;&bull;&bull;7723', bank:'Gringotts Bank', status:'verified', initials:'HG'},
-  {name:'Diagon Alley Apothecary Ltd', acc:'&bull;&bull;&bull;&bull;1188', bank:'Barclays UK', status:'verified', initials:'DA'},
-  {name:'Fleur Delacour', acc:'FR76 3000 1007 &bull;&bull;&bull;&bull;', bank:'Banque de Magie, Paris', status:'pending', initials:'FD'},
-];
+/* ---- Beneficiaries (customer-managed register, starts empty — no demo data) ---- */
+let cpBeneficiaries=[];
+try { cpBeneficiaries = JSON.parse(localStorage.getItem('cp_beneficiaries') || '[]'); } catch(e) { cpBeneficiaries = []; }
+function cpSaveBeneficiaries(){ try { localStorage.setItem('cp_beneficiaries', JSON.stringify(cpBeneficiaries)); } catch(e) {} }
 function cpRenderBeneficiaries(){
   const list=document.getElementById('cpBenList');
   const query=(document.getElementById('cpBenSearch').value||'').toLowerCase();
@@ -8089,7 +8155,7 @@ function cpRenderBeneficiaries(){
     });
   if(!list.innerHTML) list.innerHTML = '<div class="cp-card" style="text-align:center;color:rgba(255,255,255,.5);">No beneficiaries match your search.</div>';
 }
-function cpRemoveBeneficiary(i){ cpBeneficiaries.splice(i,1); cpRenderBeneficiaries(); showToast('Beneficiary removed.','Removed','success'); }
+function cpRemoveBeneficiary(i){ cpBeneficiaries.splice(i,1); cpSaveBeneficiaries(); cpRenderBeneficiaries(); showToast('Beneficiary removed.','Removed','success'); }
 function cpOpenBenModal(){ cpOpenModal('cpBenModal'); }
 function cpAddBeneficiary(){
   const name=document.getElementById('cpNewBenName').value.trim();
@@ -8098,6 +8164,7 @@ function cpAddBeneficiary(){
   if(!name||!acc){ showToast('Please enter a name and account number.','Missing details','warning'); return; }
   const initials=name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
   cpBeneficiaries.push({name, acc, bank, status:'pending', initials});
+  cpSaveBeneficiaries();
   cpCloseModal('cpBenModal');
   ['cpNewBenName','cpNewBenAcc','cpNewBenBank'].forEach(id=>document.getElementById(id).value='');
   cpRenderBeneficiaries();
