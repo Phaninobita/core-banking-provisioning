@@ -18,6 +18,7 @@
     let profile = {};
     let cifs = [];
     let accounts = [];
+    let applications = [];
 
     function getToken() { return sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY) || ''; }
     function saveSession(t, p) {
@@ -102,6 +103,7 @@
         createCif: ['Create CIF', 'Register a new corporate customer (maker → checker)'],
         createAccount: ['Create Account', 'Open a core account against an approved CIF (maker → checker)'],
         transactions: ['Process Transaction', 'Internal transfer or external wire (maker → checker)'],
+        approvals: ['Onboarding Approvals', 'Approve submitted applications — CIF + account + BIC via STP'],
         authorizations: ['Authorization Queue', 'Approve or reject maker requests as checker'],
         customers: ['Customers (CIF)', 'Customer Information File register'],
         accounts: ['Account Register', 'All core accounts'],
@@ -120,12 +122,13 @@
     async function refreshAll() {
         if (!token) return;
         try {
-            const [reqRes, cifRes, accRes, txRes, auditRes] = await Promise.all([
+            const [reqRes, cifRes, accRes, txRes, auditRes, appsRes] = await Promise.all([
                 api('/api/v1/core/requests'),
                 api('/api/v1/core/cifs'),
                 api('/api/v1/core/accounts'),
                 api('/api/v1/core/transactions?limit=100'),
-                api('/api/v1/core/audit?limit=100').catch(() => ({ logs: [] }))
+                api('/api/v1/core/audit?limit=100').catch(() => ({ logs: [] })),
+                api('/api/v1/provisioning/applications').catch(() => ({ applications: [] }))
             ]);
             const requests = reqRes.requests || [];
             cifs = cifRes.cifs || [];
@@ -133,7 +136,10 @@
             const txs = txRes.transactions || [];
             const logs = auditRes.logs || [];
             const pending = requests.filter(r => r.status === 'pending');
+            applications = (appsRes.applications || []).filter(a => !a.core_provisioned);
 
+            $('approvalsCount').textContent = applications.length;
+            $('approvalsCount').style.display = applications.length > 0 ? 'inline-block' : 'none';
             $('pendingCount').textContent = pending.length;
             $('pendingCount').style.display = pending.length > 0 ? 'inline-block' : 'none';
             $('authPendingBadge').textContent = pending.length + ' pending';
@@ -145,6 +151,7 @@
 
             renderPendingTable(pending, 'dashPendingBody', false);
             renderAuthQueue(pending, requests);
+            renderApprovals();
             renderCifs(); renderAccounts(); renderLedger(txs); renderAudit(logs);
             fillSelectors();
         } catch (err) {
@@ -200,6 +207,55 @@
                 <td class="mono">${esc(r.result_ref || r.checker_comment || '—')}</td>
             </tr>
         `).join('');
+    }
+
+    function renderApprovals() {
+        const tbody = $('approvalsBody');
+        if (applications.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="empty">No pending onboarding applications — all submitted journeys are activated. ✅</td></tr>';
+            return;
+        }
+        const journeyLabel = { link_initiated: '&#x1F517; Link Initiated', in_progress_under_review: '&#x23F3; In Progress / Under Review', account_activated: '&#x2705; Account Activated' };
+        tbody.innerHTML = applications.map(a => `
+            <tr>
+                <td class="mono">${esc(a.application_ref)}</td>
+                <td>${esc(a.company_name || a.trade_name || '—')}</td>
+                <td class="mono">${esc(a.crn)}</td>
+                <td>${esc(a.registered_email || '')}</td>
+                <td><span class="badge ${esc(a.journey_status)}">${journeyLabel[a.journey_status] || esc(a.journey_status)}</span></td>
+                <td>${a.core_provisioned ? '<span class="badge approved">Provisioned</span>' : '<span class="badge rejected">Not in core</span>'}</td>
+                <td><button class="btn-green" data-activate="${esc(a.application_ref)}">&#x1F451; Approve &amp; Activate</button></td>
+            </tr>
+        `).join('');
+        tbody.querySelectorAll('[data-activate]').forEach(b =>
+            b.addEventListener('click', () => approveApplication(b.dataset.activate, b)));
+    }
+
+    async function approveApplication(applicationRef, btn) {
+        if (!confirm('Approve ' + applicationRef + '? This creates the CIF, opens the core account, assigns the dedicated BIC and activates the account.')) return;
+        const panel = $('approvalResult');
+        panel.style.display = 'block';
+        panel.textContent = 'Running straight-through processing for ' + applicationRef + '…';
+        btn.disabled = true;
+        try {
+            const res = await api('/api/v1/provisioning/provision', {
+                method: 'POST',
+                body: JSON.stringify({ application_ref: applicationRef })
+            });
+            const cif = res.cif || {};
+            const accs = res.accounts || [];
+            panel.innerHTML = '✅ <b>' + esc(applicationRef) + ' approved — Account Activated.</b><br>' +
+                'CIF: <span class="mono">' + esc(cif.cif_number) + '</span> · ' +
+                'Dedicated BIC: <span class="mono">' + esc(res.dedicated_bic) + '</span><br>' +
+                accs.map(a => 'Account <span class="mono">' + esc(a.account_number) + '</span> (' + esc(a.currency) + ' — ' + esc(a.account_name) + ')').join('<br>') +
+                (res.core_activation && res.core_activation.ok ? '<br>Onboarding data handed off to *_core tables ✓' : '<br>⚠️ Handoff to *_core tables skipped — run db/06_core_activation.sql in Supabase');
+            toast(applicationRef + ' approved — account activated.');
+            await refreshAll();
+        } catch (err) {
+            panel.textContent = '⚠️ ' + err.message;
+            toast(err.message, true);
+            btn.disabled = false;
+        }
     }
 
     async function decide(ref, action, btn) {

@@ -172,6 +172,15 @@ router.post("/provision", requireAuth, async (req, res) => {
 
     const result = await provisionCorporateCustomer(application, { openingBalance, currencies });
 
+    // RM approval: mark the application APPROVED so the journey flips to
+    // "Account Activated" and the customer portal shows the live accounts.
+    if (application.application_ref) {
+      await supabaseClient.updateApplication(application.application_ref, { status: "approved" }).catch(e => {
+        console.warn("[PROVISIONING SERVICE] Status update notice:", e.message);
+      });
+      memStore.applications.set(application.application_ref, { ...(memStore.applications.get(application.application_ref) || {}), status: "approved" });
+    }
+
     await logAuditEvent({
       company_uid: result.company_uid,
       crn: application.crn,

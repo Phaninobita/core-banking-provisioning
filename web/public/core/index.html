@@ -75,6 +75,7 @@
             <div class="nav-item" data-view="createAccount"><span class="ico">&#x1F4B3;</span> Create Account</div>
             <div class="nav-item" data-view="transactions"><span class="ico">&#x1F4B8;</span> Process Transaction</div>
             <div class="nav-section">Checker &mdash; Authorize</div>
+            <div class="nav-item" data-view="approvals"><span class="ico">&#x1F451;</span> Onboarding Approvals <span class="count" id="approvalsCount">0</span></div>
             <div class="nav-item" data-view="authorizations"><span class="ico">&#x2705;</span> Authorization Queue <span class="count" id="pendingCount">0</span></div>
             <div class="nav-section">Registers &amp; Ledgers</div>
             <div class="nav-item" data-view="customers"><span class="ico">&#x1F5C2;&#xFE0F;</span> Customers (CIF)</div>
@@ -190,6 +191,20 @@
                         <div class="rm-alert-box" id="txError" style="display:none;"></div>
                         <div class="ok-box" id="txOk"></div>
                         <div style="margin-top:18px;"><button class="rm-btn-primary" id="btnSubmitTx"><span class="btn-label">&#x1F4B8; Submit Transaction Request (to Checker)</span></button></div>
+                    </div>
+                </section>
+
+                <!-- ONBOARDING APPROVALS -->
+                <section class="view" id="v-approvals">
+                    <div class="maker-note">&#x1F451; <span><b>Approve &amp; Activate.</b> Approving a submitted onboarding application runs straight-through processing: the CIF is created, the core account is opened under the customer's exact onboarding name, a dedicated SWIFT BIC is assigned, the full onboarding data is handed off to the <b>*_core</b> tables, and the journey flips to <b>Account Activated</b>.</span></div>
+                    <div class="section-card">
+                        <h3>Submitted Onboarding Applications</h3>
+                        <p class="desc">Applications awaiting the bank's approval decision.</p>
+                        <div class="table-wrap"><table>
+                            <thead><tr><th>Reference</th><th>Company</th><th>CRN</th><th>Email</th><th>Journey Status</th><th>Core</th><th>Action</th></tr></thead>
+                            <tbody id="approvalsBody"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+                        </table></div>
+                        <div class="ok-box" id="approvalResult"></div>
                     </div>
                 </section>
 
